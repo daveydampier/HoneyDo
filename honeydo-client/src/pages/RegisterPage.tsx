@@ -3,6 +3,11 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/client'
 import type { ApiError } from '../api/types'
+import {
+  Container, Title, TextInput, PasswordInput,
+  Button, Alert, Anchor, Stack, Text,
+} from '@mantine/core'
+import { IconAlertCircle, IconConfetti } from '@tabler/icons-react'
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -33,15 +38,11 @@ export default function RegisterPage() {
       await register(email, password, displayName)
 
       // If this registration came from an invite link, redeem the token now.
-      // The API will create the pending friend request from the inviter and mark
-      // the invitation as used. We navigate to /friends so the user sees it.
       if (inviteToken) {
         try {
           await api.post<void>('/invitations/accept', { token: inviteToken })
           navigate('/friends')
         } catch {
-          // Accepting the invite failed (expired / already used), but the account
-          // was created successfully — just go to the home page.
           navigate('/')
         }
       } else {
@@ -58,51 +59,57 @@ export default function RegisterPage() {
   const fieldError = (field: string) => errors[field]?.[0] ?? errors[field.toLowerCase()]?.[0]
 
   return (
-    <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 16px' }}>
-      <h1 style={{ marginBottom: 8 }}>Create your account</h1>
+    <Container size={400} pt={80}>
+      <Title order={1} mb="sm">Create your account</Title>
 
       {inviteToken && (
-        <p style={{ marginBottom: 20, padding: '10px 14px', background: '#f0f7ff', borderRadius: 6, fontSize: 14, color: '#0a84ff' }}>
-          🎉 You've been invited to HoneyDo! Create your account below to connect.
-        </p>
+        <Alert color="blue" variant="light" icon={<IconConfetti size={16} />} mb="lg">
+          You've been invited to HoneyDo! Create your account below to connect.
+        </Alert>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <input
-          type="text"
-          placeholder="Display name"
-          value={displayName}
-          onChange={e => setDisplayName(e.target.value)}
-          required
-        />
-        {fieldError('DisplayName') && <p style={{ color: 'red', fontSize: 14 }}>{fieldError('DisplayName')}</p>}
-
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-        {fieldError('Email') && <p style={{ color: 'red', fontSize: 14 }}>{fieldError('Email')}</p>}
-
-        <input
-          type="password"
-          placeholder="Password (min 8 chars)"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        {fieldError('Password') && <p style={{ color: 'red', fontSize: 14 }}>{fieldError('Password')}</p>}
-
-        <button type="submit" disabled={loading}>
-          {loading ? 'Creating account…' : 'Create account'}
-        </button>
+      <form onSubmit={handleSubmit}>
+        <Stack gap="sm">
+          <TextInput
+            label="Display name"
+            placeholder="Your name"
+            value={displayName}
+            onChange={e => setDisplayName(e.target.value)}
+            error={fieldError('DisplayName')}
+            required
+          />
+          <TextInput
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            error={fieldError('Email')}
+            required
+          />
+          <PasswordInput
+            label="Password"
+            placeholder="Min 8 characters"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            error={fieldError('Password')}
+            required
+          />
+          {errors._ && (
+            <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />}>
+              {errors._[0]}
+            </Alert>
+          )}
+          <Button type="submit" loading={loading} fullWidth mt="xs">
+            Create account
+          </Button>
+        </Stack>
       </form>
 
-      <p style={{ marginTop: 16, fontSize: 14 }}>
-        Already have an account? <Link to="/login">Sign in</Link>
-      </p>
-    </div>
+      <Text size="sm" mt="md">
+        Already have an account?{' '}
+        <Anchor component={Link} to="/login">Sign in</Anchor>
+      </Text>
+    </Container>
   )
 }

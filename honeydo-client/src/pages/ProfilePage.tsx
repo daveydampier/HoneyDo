@@ -3,6 +3,12 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Profile, Tag, ApiError } from '../api/types'
 import { TAG_COLORS, getTagTextColor } from '../utils/tags'
+import {
+  Container, Title, Text, TextInput, PasswordInput, Button,
+  Paper, Stack, Group, Alert, Anchor, Avatar, ColorSwatch,
+  Badge, ActionIcon,
+} from '@mantine/core'
+import { IconAlertCircle, IconCircleCheck, IconX } from '@tabler/icons-react'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
@@ -15,7 +21,7 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [urlDraft, setUrlDraft] = useState('')           // URL text input (manual entry)
+  const [urlDraft, setUrlDraft] = useState('')
   const [profileError, setProfileError] = useState<Record<string, string[]>>({})
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
@@ -40,7 +46,6 @@ export default function ProfilePage() {
   const [tagCreating, setTagCreating] = useState(false)
   const [tagError, setTagError] = useState<string | null>(null)
 
-  // Whether the current avatar came from a file upload (data URL) vs a manual URL
   const isUploadedAvatar = avatarUrl?.startsWith('data:') ?? false
 
   useEffect(() => {
@@ -62,7 +67,6 @@ export default function ProfilePage() {
   async function handleAvatarFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!fileInputRef.current) fileInputRef.current = e.target
-    // Reset so the same file can be re-selected
     e.target.value = ''
     if (!file) return
 
@@ -141,13 +145,7 @@ export default function ProfilePage() {
     setProfileError({})
     setProfileSuccess(false)
     setProfileSaving(true)
-
-    // Determine which avatarUrl to persist:
-    // - If the user typed a URL, use that
-    // - If the current avatar is an uploaded image (data URL), preserve it
-    // - Otherwise null (no avatar)
     const resolvedAvatarUrl = urlDraft.trim() || (isUploadedAvatar ? avatarUrl : null)
-
     try {
       const updated = await api.patch<Profile>('/profile', {
         displayName,
@@ -191,51 +189,33 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) return <div style={{ maxWidth: 480, margin: '40px auto', padding: '0 16px' }}>Loading…</div>
+  if (loading) return (
+    <Container size={480} pt="xl">
+      <Text c="dimmed">Loading…</Text>
+    </Container>
+  )
 
   return (
-    <div style={{ maxWidth: 480, margin: '40px auto', padding: '0 16px' }}>
-      <Link to="/" style={{ fontSize: 14, color: '#666' }}>← Back to lists</Link>
-      <h1 style={{ margin: '16px 0 8px' }}>Profile</h1>
-      <p style={{ fontSize: 13, color: '#888', marginBottom: 32 }}>
+    <Container size={480} pt="xl">
+      <Anchor component={Link} to="/" size="sm" c="dimmed">← Back to lists</Anchor>
+      <Title order={1} mt="sm" mb={4}>Profile</Title>
+      <Text size="xs" c="dimmed" mb="xl">
         Member since {new Date(profile!.createdAt).toLocaleDateString()}
-      </p>
+      </Text>
 
-      {/* Profile details */}
-      <section style={{ background: '#fff', borderRadius: 8, padding: '20px 24px', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 16, marginBottom: 16 }}>Account details</h2>
-        <p style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>Email: {profile!.email}</p>
+      {/* Account details */}
+      <Paper p="xl" radius="md" withBorder mb="lg">
+        <Title order={3} mb="md">Account details</Title>
+        <Text size="sm" c="dimmed" mb="md">Email: {profile!.email}</Text>
 
-        {/* ── Avatar section ── */}
-        <div style={{ marginBottom: 20 }}>
-          <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
-            Avatar <span style={{ color: '#999', fontWeight: 400 }}>(optional)</span>
-          </p>
-
-          {/* Preview */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 10 }}>
-            <div style={{
-              width: 72,
-              height: 72,
-              borderRadius: '50%',
-              background: '#e8e8e8',
-              overflow: 'hidden',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 28,
-              color: '#bbb',
-              border: '1px solid #ddd',
-            }}>
-              {avatarUrl
-                ? <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : '👤'
-              }
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* Hidden file input */}
+        {/* Avatar */}
+        <Stack gap="xs" mb="md">
+          <Text size="sm" fw={500}>
+            Avatar <Text span c="dimmed" fw={400}>(optional)</Text>
+          </Text>
+          <Group gap="md" align="flex-start">
+            <Avatar src={avatarUrl} size={72} radius="xl">👤</Avatar>
+            <Stack gap="xs">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -243,211 +223,198 @@ export default function ProfilePage() {
                 style={{ display: 'none' }}
                 onChange={handleAvatarFileChange}
               />
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="xs"
+                loading={avatarUploading}
                 onClick={() => fileInputRef.current?.click()}
-                disabled={avatarUploading}
-                style={{
-                  fontSize: 13,
-                  padding: '6px 14px',
-                  borderRadius: 6,
-                  border: '1px solid #ccc',
-                  background: 'none',
-                  cursor: avatarUploading ? 'not-allowed' : 'pointer',
-                  color: '#333',
-                  opacity: avatarUploading ? 0.6 : 1,
-                }}
               >
-                {avatarUploading ? 'Uploading…' : isUploadedAvatar ? 'Replace photo' : 'Upload photo'}
-              </button>
+                {isUploadedAvatar ? 'Replace photo' : 'Upload photo'}
+              </Button>
               {avatarUrl && (
-                <button
-                  type="button"
-                  onClick={handleRemoveAvatar}
-                  style={{ fontSize: 12, background: 'none', border: 'none', color: '#c00', cursor: 'pointer', textAlign: 'left', padding: 0 }}
-                >
+                <Anchor size="xs" c="red" style={{ cursor: 'pointer' }} onClick={handleRemoveAvatar}>
                   Remove
-                </button>
+                </Anchor>
               )}
-            </div>
-          </div>
-
-          <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 4px' }}>
-            JPEG, PNG, WebP or GIF · max 2 MB
-          </p>
-
-          {avatarError && <p style={{ color: 'red', fontSize: 12, margin: '4px 0 0' }}>{avatarError}</p>}
-
-          {/* Manual URL input — only shown when avatar is not an uploaded image */}
-          {!isUploadedAvatar && (
-            <label style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4, marginTop: 12 }}>
-              <span style={{ color: '#666' }}>Or enter a URL</span>
-              <input
-                type="url"
-                value={urlDraft}
-                onChange={e => { setUrlDraft(e.target.value); setProfileSuccess(false) }}
-                placeholder="https://…"
-              />
-              {profileError.AvatarUrl && <span style={{ color: 'red', fontSize: 12 }}>{profileError.AvatarUrl[0]}</span>}
-            </label>
+            </Stack>
+          </Group>
+          <Text size="xs" c="dimmed">JPEG, PNG, WebP or GIF · max 2 MB</Text>
+          {avatarError && (
+            <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
+              {avatarError}
+            </Alert>
           )}
-        </div>
+          {!isUploadedAvatar && (
+            <TextInput
+              label="Or enter a URL"
+              type="url"
+              value={urlDraft}
+              onChange={e => { setUrlDraft(e.target.value); setProfileSuccess(false) }}
+              placeholder="https://…"
+              error={profileError.AvatarUrl?.[0]}
+            />
+          )}
+        </Stack>
 
-        <form onSubmit={handleProfileSave} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <label style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            Display name
-            <input
+        <form onSubmit={handleProfileSave}>
+          <Stack gap="sm">
+            <TextInput
+              label="Display name"
               value={displayName}
               onChange={e => { setDisplayName(e.target.value); setProfileSuccess(false) }}
+              error={profileError.DisplayName?.[0]}
               required
             />
-            {profileError.DisplayName && <span style={{ color: 'red', fontSize: 12 }}>{profileError.DisplayName[0]}</span>}
-          </label>
-          <label style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            Phone number <span style={{ color: '#999' }}>(optional)</span>
-            <input
+            <TextInput
+              label="Phone number"
+              description="Optional"
               type="tel"
               value={phoneNumber}
               onChange={e => { setPhoneNumber(e.target.value); setProfileSuccess(false) }}
               placeholder="+1 555 000 0000"
+              error={profileError.PhoneNumber?.[0]}
             />
-            {profileError.PhoneNumber && <span style={{ color: 'red', fontSize: 12 }}>{profileError.PhoneNumber[0]}</span>}
-          </label>
-          {profileError._ && <p style={{ color: 'red', fontSize: 13 }}>{profileError._[0]}</p>}
-          {profileSuccess && <p style={{ color: 'green', fontSize: 13 }}>Profile updated.</p>}
-          <button type="submit" disabled={profileSaving} style={{ alignSelf: 'flex-start' }}>
-            {profileSaving ? 'Saving…' : 'Save changes'}
-          </button>
+            {profileError._ && (
+              <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />}>
+                {profileError._[0]}
+              </Alert>
+            )}
+            {profileSuccess && (
+              <Alert color="green" variant="light" icon={<IconCircleCheck size={14} />}>
+                Profile updated.
+              </Alert>
+            )}
+            <Button type="submit" loading={profileSaving} style={{ alignSelf: 'flex-start' }}>
+              Save changes
+            </Button>
+          </Stack>
         </form>
-      </section>
+      </Paper>
 
       {/* Tags */}
-      <section style={{ background: '#fff', borderRadius: 8, padding: '20px 24px', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 16, marginBottom: 4 }}>My Tags</h2>
-        <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>
+      <Paper p="xl" radius="md" withBorder mb="lg">
+        <Title order={3} mb={4}>My Tags</Title>
+        <Text size="xs" c="dimmed" mb="md">
           Tags are personal and can be applied to tasks across any of your lists.
-        </p>
+        </Text>
 
-        {/* Existing tags */}
         {myTags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+          <Group gap="xs" mb="md">
             {myTags.map(tag => (
-              <span key={tag.id} style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: tag.color,
-                color: getTagTextColor(tag.color),
-                borderRadius: 12,
-                padding: '4px 10px',
-                fontSize: 13,
-                fontWeight: 500,
-              }}>
+              <Badge
+                key={tag.id}
+                style={{ background: tag.color, color: getTagTextColor(tag.color) }}
+                variant="filled"
+                pr={4}
+                rightSection={
+                  <ActionIcon
+                    size="xs"
+                    variant="transparent"
+                    color={getTagTextColor(tag.color)}
+                    onClick={() => handleDeleteTag(tag.id, tag.name)}
+                    title="Delete tag"
+                  >
+                    <IconX size={10} />
+                  </ActionIcon>
+                }
+              >
                 {tag.name}
-                <button
-                  onClick={() => handleDeleteTag(tag.id, tag.name)}
-                  title="Delete tag"
-                  style={{
-                    background: 'none', border: 'none',
-                    color: getTagTextColor(tag.color),
-                    cursor: 'pointer', fontSize: 14, lineHeight: 1,
-                    padding: '0 0 0 2px', opacity: 0.7,
-                  }}
-                >×</button>
-              </span>
+              </Badge>
             ))}
-          </div>
+          </Group>
         )}
 
         {myTags.length === 0 && (
-          <p style={{ fontSize: 13, color: '#aaa', marginBottom: 16 }}>No tags yet. Create one below.</p>
+          <Text size="sm" c="dimmed" mb="md">No tags yet. Create one below.</Text>
         )}
 
-        {/* Create tag form */}
-        <form onSubmit={handleCreateTag} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <input
-            value={tagName}
-            onChange={e => { setTagName(e.target.value); setTagError(null) }}
-            placeholder="Tag name…"
-            maxLength={100}
-            required
-            style={{ width: '100%', boxSizing: 'border-box' }}
-          />
-
-          {/* Color swatches */}
-          <div>
-            <p style={{ fontSize: 12, color: '#888', margin: '0 0 6px' }}>Color</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {TAG_COLORS.map(color => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setTagColor(color)}
-                  title={color}
-                  style={{
-                    width: 26, height: 26, borderRadius: '50%',
-                    background: color, border: 'none',
-                    cursor: 'pointer',
-                    outline: tagColor === color ? `3px solid ${color}` : 'none',
-                    outlineOffset: 2,
-                    boxShadow: tagColor === color ? '0 0 0 1px #fff inset' : 'none',
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {tagError && <p style={{ color: 'red', fontSize: 13, margin: 0 }}>{tagError}</p>}
-
-          <button
-            type="submit"
-            disabled={tagCreating || !tagName.trim()}
-            style={{ alignSelf: 'flex-start' }}
-          >
-            {tagCreating ? 'Creating…' : 'Create tag'}
-          </button>
+        <form onSubmit={handleCreateTag}>
+          <Stack gap="sm">
+            <TextInput
+              value={tagName}
+              onChange={e => { setTagName(e.target.value); setTagError(null) }}
+              placeholder="Tag name…"
+              maxLength={100}
+              required
+            />
+            <Stack gap={4}>
+              <Text size="xs" c="dimmed">Color</Text>
+              <Group gap="xs">
+                {TAG_COLORS.map(color => (
+                  <ColorSwatch
+                    key={color}
+                    color={color}
+                    size={26}
+                    onClick={() => setTagColor(color)}
+                    style={{
+                      cursor: 'pointer',
+                      outline: tagColor === color ? `3px solid ${color}` : 'none',
+                      outlineOffset: 2,
+                      boxShadow: tagColor === color ? '0 0 0 1px #fff inset' : 'none',
+                    }}
+                  />
+                ))}
+              </Group>
+            </Stack>
+            {tagError && (
+              <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />}>
+                {tagError}
+              </Alert>
+            )}
+            <Button
+              type="submit"
+              loading={tagCreating}
+              disabled={!tagName.trim()}
+              style={{ alignSelf: 'flex-start' }}
+            >
+              Create tag
+            </Button>
+          </Stack>
         </form>
-      </section>
+      </Paper>
 
-      {/* Password change */}
-      <section style={{ background: '#fff', borderRadius: 8, padding: '20px 24px' }}>
-        <h2 style={{ fontSize: 16, marginBottom: 16 }}>Change password</h2>
-        <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <label style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            Current password
-            <input
-              type="password"
+      {/* Change password */}
+      <Paper p="xl" radius="md" withBorder mb="lg">
+        <Title order={3} mb="md">Change password</Title>
+        <form onSubmit={handlePasswordChange}>
+          <Stack gap="sm">
+            <PasswordInput
+              label="Current password"
               value={currentPassword}
               onChange={e => { setCurrentPassword(e.target.value); setPasswordSuccess(false) }}
+              error={passwordError.CurrentPassword?.[0]}
               required
             />
-            {passwordError.CurrentPassword && <span style={{ color: 'red', fontSize: 12 }}>{passwordError.CurrentPassword[0]}</span>}
-          </label>
-          <label style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            New password
-            <input
-              type="password"
+            <PasswordInput
+              label="New password"
               value={newPassword}
               onChange={e => { setNewPassword(e.target.value); setPasswordSuccess(false) }}
+              error={passwordError.NewPassword?.[0]}
               required
             />
-            {passwordError.NewPassword && <span style={{ color: 'red', fontSize: 12 }}>{passwordError.NewPassword[0]}</span>}
-          </label>
-          <label style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            Confirm new password
-            <input
-              type="password"
+            <PasswordInput
+              label="Confirm new password"
               value={confirmPassword}
               onChange={e => { setConfirmPassword(e.target.value); setPasswordSuccess(false) }}
+              error={passwordError.ConfirmPassword?.[0]}
               required
             />
-            {passwordError.ConfirmPassword && <span style={{ color: 'red', fontSize: 12 }}>{passwordError.ConfirmPassword[0]}</span>}
-          </label>
-          {passwordError._ && <p style={{ color: 'red', fontSize: 13 }}>{passwordError._[0]}</p>}
-          {passwordSuccess && <p style={{ color: 'green', fontSize: 13 }}>Password changed.</p>}
-          <button type="submit" disabled={passwordSaving} style={{ alignSelf: 'flex-start' }}>
-            {passwordSaving ? 'Updating…' : 'Update password'}
-          </button>
+            {passwordError._ && (
+              <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />}>
+                {passwordError._[0]}
+              </Alert>
+            )}
+            {passwordSuccess && (
+              <Alert color="green" variant="light" icon={<IconCircleCheck size={14} />}>
+                Password changed.
+              </Alert>
+            )}
+            <Button type="submit" loading={passwordSaving} style={{ alignSelf: 'flex-start' }}>
+              Update password
+            </Button>
+          </Stack>
         </form>
-      </section>
-    </div>
+      </Paper>
+    </Container>
   )
 }

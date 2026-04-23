@@ -2,6 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { ApiError } from '../api/types'
+import {
+  Container, Title, TextInput, PasswordInput,
+  Button, Alert, Anchor, Stack, Text,
+} from '@mantine/core'
+import { IconAlertCircle } from '@tabler/icons-react'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -27,17 +32,39 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 16px' }}>
-      <h1 style={{ marginBottom: 24 }}>Sign in to HoneyDo</h1>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
-        {error && <p style={{ color: 'red', fontSize: 14 }}>{error}</p>}
-        <button type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
+    <Container size={400} pt={80}>
+      <Title order={1} mb="lg">Sign in to HoneyDo</Title>
+      <form onSubmit={handleSubmit}>
+        <Stack gap="sm">
+          <TextInput
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+          />
+          <PasswordInput
+            label="Password"
+            placeholder="Your password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+          />
+          {error && (
+            <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />}>
+              {error}
+            </Alert>
+          )}
+          <Button type="submit" loading={loading} fullWidth mt="xs">
+            Sign in
+          </Button>
+        </Stack>
       </form>
-      <p style={{ marginTop: 16, fontSize: 14 }}>
-        Don't have an account? <Link to="/register">Register</Link>
-      </p>
-    </div>
+      <Text size="sm" mt="md">
+        Don't have an account?{' '}
+        <Anchor component={Link} to="/register">Register</Anchor>
+      </Text>
+    </Container>
   )
 }
