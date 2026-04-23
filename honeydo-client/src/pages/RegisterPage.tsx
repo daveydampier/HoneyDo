@@ -63,7 +63,7 @@ export default function RegisterPage() {
       <Title order={1} mb="sm">Create your account</Title>
 
       {inviteToken && (
-        <Alert color="blue" variant="light" icon={<IconConfetti size={16} />} mb="lg">
+        <Alert color="aqua" variant="light" icon={<IconConfetti size={16} />} mb="lg">
           You've been invited to HoneyDo! Create your account below to connect.
         </Alert>
       )}
@@ -96,7 +96,7 @@ export default function RegisterPage() {
             required
           />
           {errors._ && (
-            <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />}>
+            <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={16} />}>
               {errors._[0]}
             </Alert>
           )}

@@ -221,7 +221,174 @@ public class ItemTests(ApiFactory factory) : IClassFixture<ApiFactory>
         body.HasNextPage.Should().BeTrue();
     }
 
+    // ── IsStarred ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateItem_StarItem_Returns200WithIsStarredTrue()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+        var itemId = await TestApi.CreateItemAsync(client, listId);
+
+        var response = await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{itemId}", new { isStarred = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<ItemResponse>();
+        body!.IsStarred.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateItem_UnstarItem_Returns200WithIsStarredFalse()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+        var itemId = await TestApi.CreateItemAsync(client, listId);
+
+        await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{itemId}", new { isStarred = true });
+        var response = await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{itemId}", new { isStarred = false });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<ItemResponse>();
+        body!.IsStarred.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CreateItem_DefaultIsStarredFalse()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+
+        var response = await client.PostAsJsonAsync($"/api/lists/{listId}/items", new { content = "New task" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<ItemResponse>();
+        body!.IsStarred.Should().BeFalse();
+    }
+
+    // ── Due date editing ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateItem_SetDueDate_Returns200WithNewDueDate()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+        var itemId = await TestApi.CreateItemAsync(client, listId);
+
+        var response = await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{itemId}", new { dueDate = "2027-06-15" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<ItemResponse>();
+        body!.DueDate.Should().Be("2027-06-15");
+    }
+
+    [Fact]
+    public async Task UpdateItem_ChangeDueDate_OverwritesPreviousDate()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+        var createRes = await client.PostAsJsonAsync($"/api/lists/{listId}/items", new { content = "Task", dueDate = "2027-01-01" });
+        var created = await createRes.Content.ReadFromJsonAsync<ItemResponse>();
+
+        var response = await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{created!.Id}", new { dueDate = "2027-12-31" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<ItemResponse>();
+        body!.DueDate.Should().Be("2027-12-31");
+    }
+
+    [Fact]
+    public async Task UpdateItem_InvalidDueDateFormat_Returns400()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+        var itemId = await TestApi.CreateItemAsync(client, listId);
+
+        var response = await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{itemId}", new { dueDate = "31/12/2027" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // ── Sort priority ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetItems_StarredItemSortedBeforeUnstarred_WhenBothActive()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+
+        // Create unstarred task first so it would win on CreatedAt ascending
+        var firstId = await TestApi.CreateItemAsync(client, listId, "Unstarred task");
+        var secondId = await TestApi.CreateItemAsync(client, listId, "Starred task");
+
+        // Star the later-created item — it should still surface first
+        await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{secondId}", new { isStarred = true });
+
+        var response = await client.GetAsync($"/api/lists/{listId}/items?sortBy=CreatedAt&ascending=true");
+
+        var body = await response.Content.ReadFromJsonAsync<PagedResponse>();
+        body!.Items.Should().HaveCount(2);
+        body.Items[0].Content.Should().Be("Starred task");
+        body.Items[1].Content.Should().Be("Unstarred task");
+    }
+
+    [Fact]
+    public async Task GetItems_CompletedItemsSortedAfterActiveItems()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+
+        // Create completed task first so it would win on CreatedAt ascending without priority sort
+        var completedId = await TestApi.CreateItemAsync(client, listId, "Already done");
+        await TestApi.CreateItemAsync(client, listId, "Still to do");
+
+        await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{completedId}", new { statusId = 3 });
+
+        var response = await client.GetAsync($"/api/lists/{listId}/items?sortBy=CreatedAt&ascending=true");
+
+        var body = await response.Content.ReadFromJsonAsync<PagedResponse>();
+        body!.Items.Should().HaveCount(2);
+        body.Items[0].Content.Should().Be("Still to do");
+        body.Items[1].Content.Should().Be("Already done");
+    }
+
+    [Fact]
+    public async Task GetItems_AbandonedItemsSortedAfterActiveItems()
+    {
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+
+        var abandonedId = await TestApi.CreateItemAsync(client, listId, "Abandoned");
+        await TestApi.CreateItemAsync(client, listId, "Active");
+
+        await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{abandonedId}", new { statusId = 4 });
+
+        var response = await client.GetAsync($"/api/lists/{listId}/items?sortBy=CreatedAt&ascending=true");
+
+        var body = await response.Content.ReadFromJsonAsync<PagedResponse>();
+        body!.Items[0].Content.Should().Be("Active");
+        body.Items[1].Content.Should().Be("Abandoned");
+    }
+
+    [Fact]
+    public async Task GetItems_StarredTaskDoesNotSortBeforeActiveUnstarred_WhenStarredIsComplete()
+    {
+        // A completed starred item should still sink to the resolved group, not float to the top
+        var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
+        var listId = await TestApi.CreateListAsync(client);
+
+        var completedStarredId = await TestApi.CreateItemAsync(client, listId, "Completed starred");
+        await TestApi.CreateItemAsync(client, listId, "Active unstarred");
+
+        await client.PatchAsJsonAsync($"/api/lists/{listId}/items/{completedStarredId}", new { statusId = 3, isStarred = true });
+
+        var response = await client.GetAsync($"/api/lists/{listId}/items?sortBy=CreatedAt&ascending=true");
+
+        var body = await response.Content.ReadFromJsonAsync<PagedResponse>();
+        body!.Items[0].Content.Should().Be("Active unstarred");
+        body.Items[1].Content.Should().Be("Completed starred");
+    }
+
     private record PagedResponse(List<ItemResponse> Items, int TotalCount, int Page, int PageSize, int TotalPages, bool HasNextPage, bool HasPreviousPage);
-    private record ItemResponse(Guid Id, Guid ListId, string Content, StatusInfo Status, string? DueDate, string? Notes);
+    private record ItemResponse(Guid Id, Guid ListId, string Content, StatusInfo Status, string? DueDate, string? Notes, bool IsStarred);
     private record StatusInfo(int Id, string Name);
 }

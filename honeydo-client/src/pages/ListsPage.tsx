@@ -10,10 +10,10 @@ import { IconSearch, IconAlertCircle, IconTag, IconChevronDown } from '@tabler/i
 import { getTagTextColor } from '../utils/tags'
 
 const STATUS_CHIPS = [
-  { key: 'notStartedCount', label: 'not started', color: '#868e96' },
-  { key: 'partialCount',    label: 'partial',     color: '#f59f00' },
-  { key: 'completeCount',   label: 'complete',    color: '#2f9e44' },
-  { key: 'abandonedCount',  label: 'abandoned',   color: '#e03131' },
+  { key: 'notStartedCount', label: 'not started', color: '#616163' },
+  { key: 'partialCount',    label: 'partial',     color: '#eccb53' },
+  { key: 'completeCount',   label: 'complete',    color: '#00e0ac' },
+  { key: 'abandonedCount',  label: 'abandoned',   color: '#ff8547' },
 ] as const
 
 export default function ListsPage() {
@@ -173,7 +173,7 @@ export default function ListsPage() {
           {/* Delete — always reserve the space; hidden when not owner */}
           <Button
             variant="subtle"
-            color="red"
+            color="tangerine"
             size="xs"
             loading={deletingId === list.id}
             onClick={() => list.role === 'Owner' ? handleDelete(list) : undefined}
@@ -205,7 +205,7 @@ export default function ListsPage() {
       </form>
 
       {error && (
-        <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />} mb="md">
+        <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={16} />} mb="md">
           {error}
         </Alert>
       )}
@@ -261,7 +261,7 @@ export default function ListsPage() {
                         leftSection={<IconTag size={13} />}
                         rightSection={
                           selectedTagIds.size > 0
-                            ? <Badge size="xs" circle variant="white" color="blue">{selectedTagIds.size}</Badge>
+                            ? <Badge size="xs" circle variant="white" color="aqua">{selectedTagIds.size}</Badge>
                             : <IconChevronDown size={12} />
                         }
                         onClick={() => setTagPopoverOpen(o => !o)}

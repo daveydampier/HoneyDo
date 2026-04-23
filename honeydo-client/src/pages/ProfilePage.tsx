@@ -242,7 +242,7 @@ export default function ProfilePage() {
           </Group>
           <Text size="xs" c="dimmed">JPEG, PNG, WebP or GIF · max 2 MB</Text>
           {avatarError && (
-            <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
+            <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
               {avatarError}
             </Alert>
           )}
@@ -277,12 +277,12 @@ export default function ProfilePage() {
               error={profileError.PhoneNumber?.[0]}
             />
             {profileError._ && (
-              <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />}>
+              <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={14} />}>
                 {profileError._[0]}
               </Alert>
             )}
             {profileSuccess && (
-              <Alert color="green" variant="light" icon={<IconCircleCheck size={14} />}>
+              <Alert color="brand" variant="light" icon={<IconCircleCheck size={14} />}>
                 Profile updated.
               </Alert>
             )}
@@ -359,7 +359,7 @@ export default function ProfilePage() {
               </Group>
             </Stack>
             {tagError && (
-              <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />}>
+              <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={14} />}>
                 {tagError}
               </Alert>
             )}
@@ -419,12 +419,12 @@ export default function ProfilePage() {
               required
             />
             {passwordError._ && (
-              <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />}>
+              <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={14} />}>
                 {passwordError._[0]}
               </Alert>
             )}
             {passwordSuccess && (
-              <Alert color="green" variant="light" icon={<IconCircleCheck size={14} />}>
+              <Alert color="brand" variant="light" icon={<IconCircleCheck size={14} />}>
                 Password changed.
               </Alert>
             )}

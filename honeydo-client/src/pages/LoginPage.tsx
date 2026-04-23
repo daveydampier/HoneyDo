@@ -52,7 +52,7 @@ export default function LoginPage() {
             required
           />
           {error && (
-            <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />}>
+            <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={16} />}>
               {error}
             </Alert>
           )}

@@ -97,12 +97,12 @@ export default function FriendsPage() {
           </Group>
         </form>
         {sendError && (
-          <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />}>
+          <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={16} />}>
             {sendError}
           </Alert>
         )}
         {sendSuccess && (
-          <Alert color="green" variant="light" icon={<IconCircleCheck size={16} />}>
+          <Alert color="brand" variant="light" icon={<IconCircleCheck size={16} />}>
             {sendSuccess}
           </Alert>
         )}
@@ -149,10 +149,10 @@ export default function FriendsPage() {
                         <Text fw={600} size="sm">{req.displayName}</Text>
                         <Text size="xs" c="dimmed">{req.email}</Text>
                       </Stack>
-                      <Badge color="yellow" variant="light">Pending</Badge>
+                      <Badge color="gold" variant="light">Pending</Badge>
                       <Button
                         variant="subtle"
-                        color="red"
+                        color="tangerine"
                         size="xs"
                         onClick={() => handleCancelRequest(req.addresseeId)}
                       >
@@ -187,7 +187,7 @@ export default function FriendsPage() {
                       </Stack>
                       <Button
                         variant="subtle"
-                        color="red"
+                        color="tangerine"
                         size="xs"
                         onClick={() => handleRemove(friend.profileId, friend.displayName)}
                       >
