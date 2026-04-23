@@ -9,7 +9,6 @@ public class Profile
     public string DisplayName { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime? DeletedAt { get; set; }
 
     public ICollection<ListMember> ListMemberships { get; set; } = [];
     public ICollection<Tag> Tags { get; set; } = [];
