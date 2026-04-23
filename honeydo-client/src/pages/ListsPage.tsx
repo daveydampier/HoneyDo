@@ -14,6 +14,7 @@ export default function ListsPage() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     api.get<Profile>('/profile')
@@ -22,6 +23,9 @@ export default function ListsPage() {
   }, [])
 
   const activeLists = lists.filter(l => !l.closedAt)
+  const filteredActiveLists = search.trim() === ''
+    ? activeLists
+    : activeLists.filter(l => l.title.toLowerCase().includes(search.trim().toLowerCase()))
   const closedLists = [...lists.filter(l => !!l.closedAt)]
     .sort((a, b) => new Date(b.closedAt!).getTime() - new Date(a.closedAt!).getTime())
 
@@ -111,14 +115,27 @@ export default function ListsPage() {
         <>
           {/* Active lists */}
           <section style={{ marginBottom: closedLists.length > 0 ? 32 : 0 }}>
-            <h2 style={{ fontSize: 13, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>
-              Active
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <h2 style={{ fontSize: 13, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, flexShrink: 0 }}>
+                Active
+              </h2>
+              {activeLists.length > 0 && (
+                <input
+                  type="search"
+                  placeholder="Search lists…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ flex: 1, fontSize: 13, padding: '3px 8px' }}
+                />
+              )}
+            </div>
             {activeLists.length === 0 ? (
               <p style={{ color: '#666', fontSize: 14 }}>No active lists. Create one above.</p>
+            ) : filteredActiveLists.length === 0 ? (
+              <p style={{ color: '#666', fontSize: 14 }}>No lists match "{search.trim()}".</p>
             ) : (
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {activeLists.map(listRow)}
+                {filteredActiveLists.map(listRow)}
               </ul>
             )}
           </section>
