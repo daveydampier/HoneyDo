@@ -4,7 +4,7 @@ import { api } from '../api/client'
 import type { TodoList, Tag, ApiError } from '../api/types'
 import {
   Container, Group, Title, Text, TextInput, Button,
-  Paper, Stack, Anchor, Loader, Alert, Badge, Tooltip,
+  Paper, Stack, Anchor, Loader, Alert, Badge,
 } from '@mantine/core'
 import { IconSearch, IconAlertCircle, IconTag } from '@tabler/icons-react'
 import { getTagTextColor } from '../utils/tags'
@@ -178,38 +178,48 @@ export default function ListsPage() {
         <Stack gap="xl">
           {/* Active lists */}
           <section>
-            {/* Search + tag filter toolbar */}
-            {activeLists.length > 0 && (
-              <Stack gap="xs" mb="sm">
-                <Group gap="sm" align="center">
-                  <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em', flexShrink: 0 }}>
-                    Active
-                  </Text>
-                  <TextInput
-                    style={{ flex: '0 1 220px' }}
-                    size="xs"
-                    placeholder="Search lists…"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    leftSection={<IconSearch size={12} />}
-                  />
-                  {hasFilters && (
-                    <Tooltip label="Clear all filters">
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        color="gray"
-                        onClick={() => { setSearch(''); setSelectedTagIds(new Set()) }}
-                      >
-                        Clear
-                      </Button>
-                    </Tooltip>
-                  )}
-                </Group>
+            {/* Section heading row */}
+            <Group justify="space-between" align="center" mb="xs">
+              <Text size="sm" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.06em' }}>
+                Active
+              </Text>
+              {hasFilters && (
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => { setSearch(''); setSelectedTagIds(new Set()) }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </Group>
 
-                {/* Tag filter pills */}
+            {/* Search + tag filter row */}
+            {activeLists.length > 0 && (
+              <Group gap="sm" wrap="nowrap" mb="sm" align="center">
+                {/* Search — fixed width on the left */}
+                <TextInput
+                  style={{ width: 200, flexShrink: 0 }}
+                  size="xs"
+                  placeholder="Search lists…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  leftSection={<IconSearch size={12} />}
+                />
+
+                {/* Tag pills — scrollable strip on the right */}
                 {availableTags.length > 0 && (
-                  <Group gap="xs" pl={2}>
+                  <div style={{
+                    flex: 1,
+                    overflowX: 'auto',
+                    display: 'flex',
+                    gap: 6,
+                    alignItems: 'center',
+                    padding: '3px 2px',
+                    // subtle fade on the right edge to hint there's more
+                    maskImage: 'linear-gradient(to right, black 85%, transparent 100%)',
+                  }}>
                     {availableTags.map(tag => {
                       const active = selectedTagIds.has(tag.id)
                       return (
@@ -219,6 +229,7 @@ export default function ListsPage() {
                           variant={active ? 'filled' : 'outline'}
                           style={{
                             cursor: 'pointer',
+                            flexShrink: 0,
                             background: active ? tag.color : 'transparent',
                             color: active ? getTagTextColor(tag.color) : tag.color,
                             borderColor: tag.color,
@@ -230,16 +241,9 @@ export default function ListsPage() {
                         </Badge>
                       )
                     })}
-                  </Group>
+                  </div>
                 )}
-              </Stack>
-            )}
-
-            {/* Active heading when no search bar (no active lists) */}
-            {activeLists.length === 0 && (
-              <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb="xs" style={{ letterSpacing: '0.05em' }}>
-                Active
-              </Text>
+              </Group>
             )}
 
             {activeLists.length === 0 ? (
