@@ -129,5 +129,21 @@ public class ListCrudTests(ApiFactory factory) : IClassFixture<ApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
-    private record ListResponse(Guid Id, string Title, string Role, string OwnerName, int MemberCount, int ItemCount);
+    private record ListResponse(
+        Guid Id,
+        string Title,
+        string Role,
+        string OwnerName,
+        List<string> ContributorNames,
+        int MemberCount,
+        int NotStartedCount,
+        int PartialCount,
+        int CompleteCount,
+        int AbandonedCount,
+        DateTime CreatedAt,
+        DateTime UpdatedAt,
+        DateTime? ClosedAt,
+        List<TagSummary> Tags);
+
+    private record TagSummary(Guid Id, string Name, string Color);
 }
