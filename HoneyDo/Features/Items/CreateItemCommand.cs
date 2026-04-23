@@ -67,6 +67,7 @@ public class CreateItemCommandHandler(AppDbContext db) : IRequestHandler<CreateI
             ListId = request.ListId,
             ActorId = request.ProfileId,
             ActionType = "ItemCreated",
+            Detail = Truncate(request.Content),
             Timestamp = now
         });
 
@@ -77,4 +78,7 @@ public class CreateItemCommandHandler(AppDbContext db) : IRequestHandler<CreateI
             .Select(TodoItemResponse.Projection)
             .FirstAsync(ct);
     }
+
+    private static string Truncate(string s) =>
+        s.Length > 100 ? s[..97] + "…" : s;
 }

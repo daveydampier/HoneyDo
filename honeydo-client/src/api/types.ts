@@ -106,6 +106,7 @@ export interface ActivityLogEntry {
   id: string
   actionType: string
   actorName: string
+  detail: string | null
   timestamp: string
 }
 

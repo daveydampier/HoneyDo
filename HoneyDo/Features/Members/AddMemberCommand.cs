@@ -49,6 +49,7 @@ public class AddMemberCommandHandler(AppDbContext db) : IRequestHandler<AddMembe
             ListId = request.ListId,
             ActorId = request.ActorId,
             ActionType = "MemberAdded",
+            Detail = invitee.DisplayName,
             Timestamp = now
         });
 

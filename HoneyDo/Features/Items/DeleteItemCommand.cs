@@ -28,6 +28,7 @@ public class DeleteItemCommandHandler(AppDbContext db) : IRequestHandler<DeleteI
             ListId = request.ListId,
             ActorId = request.ProfileId,
             ActionType = "ItemDeleted",
+            Detail = item.Content.Length > 100 ? item.Content[..97] + "…" : item.Content,
             Timestamp = item.DeletedAt.Value
         });
 

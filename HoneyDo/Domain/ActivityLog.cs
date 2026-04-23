@@ -6,6 +6,7 @@ public class ActivityLog
     public Guid ListId { get; set; }
     public Guid ActorId { get; set; }
     public string ActionType { get; set; } = string.Empty;
+    public string? Detail { get; set; }
     public DateTime Timestamp { get; set; }
 
     public TodoList List { get; set; } = null!;

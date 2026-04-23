@@ -10,6 +10,7 @@ public class ActivityLogConfiguration : IEntityTypeConfiguration<ActivityLog>
     {
         builder.HasKey(a => a.Id);
         builder.Property(a => a.ActionType).HasMaxLength(50).IsRequired();
+        builder.Property(a => a.Detail).HasMaxLength(200);
 
         builder.HasOne(a => a.List)
             .WithMany(l => l.ActivityLogs)
