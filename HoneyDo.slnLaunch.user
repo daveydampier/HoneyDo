@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "HoneyDo\\HoneyDo.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "honeydo-client\\",
+        "Action": "Start"
+      }
+    ]
+  }
+]

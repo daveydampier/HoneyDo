@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0">
+  <PropertyGroup>
+    <StartupCommand>npm run dev</StartupCommand>
+    <ShouldRunBuildScript>false</ShouldRunBuildScript>
+    <StartWebServer>true</StartWebServer>
+    <WebRoot>dist</WebRoot>
+  </PropertyGroup>
+</Project>
