@@ -154,10 +154,17 @@ export default function ListsPage() {
             )}
           </Group>
 
-          {/* Owner + delete */}
-          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {list.ownerName}
-          </Text>
+          {/* Owner / collaborators */}
+          <Stack gap={2} style={{ flexShrink: 0, textAlign: 'right' }}>
+            <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+              <Text span fw={500} c="dimmed">Owner:</Text> {list.ownerName}
+            </Text>
+            {list.contributorNames.length > 0 && (
+              <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+                <Text span fw={500} c="dimmed">Collaborators:</Text> {list.contributorNames.join(', ')}
+              </Text>
+            )}
+          </Stack>
           {list.role === 'Owner' && (
             <Button
               variant="subtle"

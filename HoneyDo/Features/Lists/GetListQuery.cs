@@ -37,6 +37,11 @@ public class GetListQueryHandler(AppDbContext db) : IRequestHandler<GetListQuery
             .Select(m => m.Profile.DisplayName)
             .FirstOrDefaultAsync(ct) ?? "Unknown";
 
+        var contributorNames = await db.ListMembers
+            .Where(m => m.ListId == request.ListId && m.Role == MemberRole.Contributor)
+            .Select(m => m.Profile.DisplayName)
+            .ToListAsync(ct);
+
         var tags = await db.TodoItemTags
             .Where(t => t.Item.ListId == request.ListId)
             .Select(t => new { t.Tag.Id, t.Tag.Name, t.Tag.Color })
@@ -49,6 +54,7 @@ public class GetListQueryHandler(AppDbContext db) : IRequestHandler<GetListQuery
             membership.ListTitle,
             membership.Role,
             ownerName,
+            contributorNames,
             membership.MemberCount,
             membership.NotStartedCount,
             membership.PartialCount,

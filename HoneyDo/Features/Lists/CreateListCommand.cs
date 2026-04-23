@@ -42,6 +42,7 @@ public class CreateListCommandHandler(AppDbContext db) : IRequestHandler<CreateL
             .Select(p => p.DisplayName)
             .FirstAsync(ct);
 
-        return new TodoListResponse(list.Id, list.Title, MemberRole.Owner, ownerName, 1, 0, 0, 0, 0, list.CreatedAt, list.UpdatedAt, null, []);
+        // New list has only the owner — no contributors yet
+        return new TodoListResponse(list.Id, list.Title, MemberRole.Owner, ownerName, [], 1, 0, 0, 0, 0, list.CreatedAt, list.UpdatedAt, null, []);
     }
 }

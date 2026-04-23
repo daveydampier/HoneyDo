@@ -9,6 +9,7 @@ export interface TodoList {
   title: string
   role: 'Owner' | 'Contributor'
   ownerName: string
+  contributorNames: string[]
   memberCount: number
   notStartedCount: number
   partialCount: number

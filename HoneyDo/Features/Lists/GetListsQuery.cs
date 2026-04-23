@@ -13,6 +13,7 @@ public record TodoListResponse(
     string Title,
     MemberRole Role,
     string OwnerName,
+    IEnumerable<string> ContributorNames,
     int MemberCount,
     int NotStartedCount,
     int PartialCount,
@@ -47,11 +48,20 @@ public class GetListsQueryHandler(AppDbContext db) : IRequestHandler<GetListsQue
 
         var listIds = memberships.Select(m => m.ListId).ToList();
 
-        // Separate query to reliably resolve owner DisplayName via Profiles join
-        var ownerNames = await db.ListMembers
-            .Where(m => listIds.Contains(m.ListId) && m.Role == MemberRole.Owner)
-            .Select(m => new { m.ListId, m.Profile.DisplayName })
-            .ToDictionaryAsync(m => m.ListId, m => m.DisplayName, ct);
+        // Separate query to reliably resolve member DisplayNames via Profiles join
+        var memberNames = await db.ListMembers
+            .Where(m => listIds.Contains(m.ListId))
+            .Select(m => new { m.ListId, m.Role, m.Profile.DisplayName })
+            .ToListAsync(ct);
+
+        var ownerNames = memberNames
+            .Where(m => m.Role == MemberRole.Owner)
+            .ToDictionary(m => m.ListId, m => m.DisplayName);
+
+        var contributorsByList = memberNames
+            .Where(m => m.Role == MemberRole.Contributor)
+            .GroupBy(m => m.ListId)
+            .ToDictionary(g => g.Key, g => g.Select(m => m.DisplayName).ToList());
 
         // Distinct tags applied to any item in each list
         var rawTags = await db.TodoItemTags
@@ -69,6 +79,7 @@ public class GetListsQueryHandler(AppDbContext db) : IRequestHandler<GetListsQue
             m.ListTitle,
             m.Role,
             ownerNames.GetValueOrDefault(m.ListId) ?? "Unknown",
+            contributorsByList.GetValueOrDefault(m.ListId) ?? [],
             m.MemberCount,
             m.NotStartedCount,
             m.PartialCount,

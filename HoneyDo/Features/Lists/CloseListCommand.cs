@@ -52,18 +52,21 @@ public class CloseListCommandHandler(AppDbContext db) : IRequestHandler<CloseLis
 
         await db.SaveChangesAsync(ct);
 
-        var memberCount = await db.ListMembers.CountAsync(m => m.ListId == request.ListId, ct);
-        var ownerName = await db.ListMembers
-            .Where(m => m.ListId == request.ListId && m.Role == MemberRole.Owner)
-            .Select(m => m.Profile.DisplayName)
-            .FirstOrDefaultAsync(ct) ?? "Unknown";
+        var memberNames = await db.ListMembers
+            .Where(m => m.ListId == request.ListId)
+            .Select(m => new { m.Role, m.Profile.DisplayName })
+            .ToListAsync(ct);
+
+        var ownerName = memberNames.FirstOrDefault(m => m.Role == MemberRole.Owner)?.DisplayName ?? "Unknown";
+        var contributorNames = memberNames.Where(m => m.Role == MemberRole.Contributor).Select(m => m.DisplayName).ToList();
 
         return new TodoListResponse(
             membership.List.Id,
             membership.List.Title,
             membership.Role,
             ownerName,
-            memberCount,
+            contributorNames,
+            memberNames.Count,
             items.Count(s => s == 1),
             items.Count(s => s == 2),
             items.Count(s => s == 3),
