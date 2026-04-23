@@ -352,7 +352,7 @@ export default function ProfilePage() {
                       cursor: 'pointer',
                       outline: tagColor === color ? `3px solid ${color}` : 'none',
                       outlineOffset: 2,
-                      boxShadow: tagColor === color ? '0 0 0 1px #fff inset' : 'none',
+                      boxShadow: tagColor === color ? '0 0 0 1px var(--mantine-color-body) inset' : 'none',
                     }}
                   />
                 ))}

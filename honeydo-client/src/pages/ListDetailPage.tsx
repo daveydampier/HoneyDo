@@ -418,7 +418,15 @@ export default function ListDetailPage() {
                 type="date"
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
-                style={{ fontSize: 13, padding: '6px 8px', borderRadius: 6, border: '1px solid #ced4da' }}
+                style={{
+                  fontSize: 13,
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  border: '1px solid var(--mantine-color-default-border)',
+                  background: 'var(--mantine-color-default)',
+                  color: 'var(--mantine-color-text)',
+                  colorScheme: 'inherit',
+                }}
               />
               <Button type="submit">Add</Button>
             </Group>
