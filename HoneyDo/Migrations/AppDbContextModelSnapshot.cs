@@ -31,6 +31,10 @@ namespace HoneyDo.Migrations
                     b.Property<Guid>("ActorId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Detail")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("ListId")
                         .HasColumnType("TEXT");
 

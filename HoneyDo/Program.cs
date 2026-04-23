@@ -24,9 +24,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply any pending EF migrations automatically on startup.
+// Apply any pending EF migrations automatically on startup (relational only — not in-memory test DB).
 using (var scope = app.Services.CreateScope())
-    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (db.Database.IsRelational())
+        db.Database.Migrate();
+}
 
 app.UseMiddleware<ExceptionMiddleware>();
 

@@ -11,6 +11,7 @@ public record ActivityLogResponse(
     Guid Id,
     string ActionType,
     string ActorName,
+    string? Detail,
     DateTime Timestamp);
 
 public class GetActivityLogsHandler(AppDbContext db) : IRequestHandler<GetActivityLogsQuery, IEnumerable<ActivityLogResponse>>
@@ -30,6 +31,7 @@ public class GetActivityLogsHandler(AppDbContext db) : IRequestHandler<GetActivi
                 a.Id,
                 a.ActionType,
                 a.Actor.DisplayName,
+                a.Detail,
                 a.Timestamp))
             .ToListAsync(ct);
     }

@@ -469,3 +469,4 @@ C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\ref\HoneyDo.
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\MailKit.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\MimeKit.dll
+C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.sourcelink.json

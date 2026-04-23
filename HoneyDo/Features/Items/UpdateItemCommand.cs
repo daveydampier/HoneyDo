@@ -72,6 +72,7 @@ public class UpdateItemCommandHandler(AppDbContext db) : IRequestHandler<UpdateI
                 ListId = request.ListId,
                 ActorId = request.ProfileId,
                 ActionType = "StatusChanged",
+                Detail = $"{Truncate(item.Content)} → {StatusName(item.StatusId)}",
                 Timestamp = item.UpdatedAt
             });
         }
@@ -83,4 +84,16 @@ public class UpdateItemCommandHandler(AppDbContext db) : IRequestHandler<UpdateI
             .Select(TodoItemResponse.Projection)
             .FirstAsync(ct);
     }
+
+    private static string Truncate(string s) =>
+        s.Length > 80 ? s[..77] + "…" : s;
+
+    private static string StatusName(int id) => id switch
+    {
+        1 => "Not Started",
+        2 => "Partial",
+        3 => "Complete",
+        4 => "Abandoned",
+        _ => "Unknown"
+    };
 }

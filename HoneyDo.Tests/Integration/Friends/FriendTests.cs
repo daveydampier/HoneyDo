@@ -30,7 +30,7 @@ public class FriendTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         var response = await senderClient.PostAsJsonAsync("/api/friends", new { email = recipientEmail });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var friends = await senderClient.GetFromJsonAsync<FriendsResult>("/api/friends");
         friends!.PendingSent.Should().HaveCount(1);
@@ -61,13 +61,15 @@ public class FriendTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task SendFriendRequest_UnknownEmail_Returns400()
+    public async Task SendFriendRequest_UnknownEmail_SendsInvitationAndReturns200()
     {
         var (client, _, _, _) = await TestApi.RegisterAsync(factory.CreateClient());
 
         var response = await client.PostAsJsonAsync("/api/friends", new { email = "nobody@test.com" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<SendRequestResult>();
+        body!.InvitationSent.Should().BeTrue();
     }
 
     [Fact]
@@ -129,7 +131,7 @@ public class FriendTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         // Sender can re-send after decline
         var resend = await senderClient.PostAsJsonAsync("/api/friends", new { email = recipientEmail });
-        resend.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        resend.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -183,4 +185,5 @@ public class FriendTests(ApiFactory factory) : IClassFixture<ApiFactory>
     private record FriendInfo(Guid ProfileId, string DisplayName, string Email);
     private record ReceivedInfo(Guid RequesterId, string DisplayName, string Email);
     private record SentInfo(Guid AddresseeId, string DisplayName, string Email);
+    private record SendRequestResult(bool InvitationSent);
 }

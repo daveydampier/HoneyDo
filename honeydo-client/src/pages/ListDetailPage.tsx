@@ -1,8 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
-import type { TodoItem, PagedResult, TodoList, Member, AddableFriend, ApiError } from '../api/types'
+import type { TodoItem, Tag, PagedResult, TodoList, Member, AddableFriend, ApiError } from '../api/types'
 import { useAuth } from '../context/AuthContext'
+import { getTagTextColor } from '../utils/tags'
 
 const STATUS_LABELS: Record<number, string> = { 1: 'Not Started', 2: 'Partial', 3: 'Complete', 4: 'Abandoned' }
 const NOTES_MAX = 256
@@ -51,6 +52,11 @@ export default function ListDetailPage() {
   const [editNotes, setEditNotes] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
 
+  // Tags
+  const [myTags, setMyTags] = useState<Tag[]>([])
+  const [editTagIds, setEditTagIds] = useState<Set<string>>(new Set())
+  const [togglingTagId, setTogglingTagId] = useState<string | null>(null)
+
   // Members
   const [members, setMembers] = useState<Member[]>([])
   const [addableFriends, setAddableFriends] = useState<AddableFriend[]>([])
@@ -77,6 +83,10 @@ export default function ListDetailPage() {
       .catch(() => {})
       .finally(() => setLoadingItems(false))
   }, [listId, sortBy, ascending])
+
+  useEffect(() => {
+    api.get<Tag[]>('/tags').then(setMyTags).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!showMembers || !listId) return
@@ -173,12 +183,42 @@ export default function ListDetailPage() {
     setEditingId(item.id)
     setEditContent(item.content)
     setEditNotes(item.notes ?? '')
+    setEditTagIds(new Set(item.tags.map(t => t.id)))
     setEditError(null)
   }
 
   function cancelEdit() {
     setEditingId(null)
+    setEditTagIds(new Set())
     setEditError(null)
+  }
+
+  async function handleTagToggle(tagId: string) {
+    if (!listId || !editingId) return
+    const isApplied = editTagIds.has(tagId)
+    setTogglingTagId(tagId)
+    try {
+      if (isApplied) {
+        await api.delete(`/lists/${listId}/items/${editingId}/tags/${tagId}`)
+        setEditTagIds(prev => { const s = new Set(prev); s.delete(tagId); return s })
+        setItems(prev => prev.map(i =>
+          i.id === editingId ? { ...i, tags: i.tags.filter(t => t.id !== tagId) } : i
+        ))
+      } else {
+        await api.post(`/lists/${listId}/items/${editingId}/tags/${tagId}`, {})
+        setEditTagIds(prev => new Set([...prev, tagId]))
+        const tag = myTags.find(t => t.id === tagId)
+        if (tag) {
+          setItems(prev => prev.map(i =>
+            i.id === editingId ? { ...i, tags: [...i.tags, tag] } : i
+          ))
+        }
+      }
+    } catch {
+      // leave state unchanged on failure
+    } finally {
+      setTogglingTagId(null)
+    }
   }
 
   async function handleEditSave(id: string) {
@@ -449,6 +489,39 @@ export default function ListDetailPage() {
                     </span>
                   </div>
 
+                  {/* Tag picker */}
+                  {myTags.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: 12, color: '#888', margin: '0 0 6px' }}>Tags</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {myTags.map(tag => {
+                          const applied = editTagIds.has(tag.id)
+                          return (
+                            <button
+                              key={tag.id}
+                              type="button"
+                              onClick={() => handleTagToggle(tag.id)}
+                              disabled={togglingTagId === tag.id}
+                              style={{
+                                background: applied ? tag.color : `${tag.color}22`,
+                                color: applied ? getTagTextColor(tag.color) : tag.color,
+                                border: `1px solid ${tag.color}`,
+                                borderRadius: 10,
+                                padding: '3px 10px',
+                                fontSize: 12,
+                                fontWeight: 500,
+                                cursor: togglingTagId === tag.id ? 'not-allowed' : 'pointer',
+                                opacity: togglingTagId === tag.id ? 0.6 : 1,
+                              }}
+                            >
+                              {tag.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {editError && <p style={{ color: 'red', fontSize: 13, margin: 0 }}>{editError}</p>}
 
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -519,6 +592,24 @@ export default function ListDetailPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Tag pills */}
+                  {item.tags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6, paddingLeft: 112 }}>
+                      {item.tags.map(tag => (
+                        <span key={tag.id} style={{
+                          background: tag.color,
+                          color: getTagTextColor(tag.color),
+                          borderRadius: 10,
+                          padding: '1px 8px',
+                          fontSize: 11,
+                          fontWeight: 500,
+                        }}>
+                          {tag.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Notes display */}
                   {item.notes ? (

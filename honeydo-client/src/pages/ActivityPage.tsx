@@ -99,6 +99,11 @@ export default function ActivityPage() {
                 <span style={{ fontWeight: 600 }}>{log.actorName}</span>
                 {' '}
                 <span style={{ color: '#333' }}>{friendlyAction(log.actionType)}</span>
+                {log.detail && (
+                  <div style={{ fontSize: 13, color: '#555', marginTop: 2, fontStyle: 'italic' }}>
+                    {log.detail}
+                  </div>
+                )}
                 <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
                   {formatTimestamp(log.timestamp)}
                 </div>

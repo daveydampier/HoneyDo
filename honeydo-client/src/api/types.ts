@@ -16,6 +16,12 @@ export interface TodoList {
   closedAt: string | null
 }
 
+export interface Tag {
+  id: string
+  name: string
+  color: string
+}
+
 export interface TodoItem {
   id: string
   listId: string
@@ -24,7 +30,7 @@ export interface TodoItem {
   notes: string | null
   dueDate: string | null
   assignedTo: { id: string; displayName: string } | null
-  tags: { id: string; name: string; color: string }[]
+  tags: Tag[]
   createdAt: string
   updatedAt: string
 }
@@ -100,6 +106,7 @@ export interface ActivityLogEntry {
   id: string
   actionType: string
   actorName: string
+  detail: string | null
   timestamp: string
 }
 
