@@ -4,6 +4,11 @@ import { useAuth } from '../context/AuthContext'
 import { api } from '../api/client'
 import type { TodoList, Profile, ApiError } from '../api/types'
 import AvatarCircle from '../components/AvatarCircle'
+import {
+  Container, Group, Title, Text, TextInput, Button,
+  Paper, Stack, Anchor, Loader, Alert, UnstyledButton,
+} from '@mantine/core'
+import { IconSearch, IconAlertCircle } from '@tabler/icons-react'
 
 export default function ListsPage() {
   const { displayName, logout } = useAuth()
@@ -65,110 +70,134 @@ export default function ListsPage() {
   }
 
   const listRow = (list: TodoList) => (
-    <li key={list.id} style={{ background: '#fff', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-      <Link to={`/lists/${list.id}`} style={{ fontWeight: 600, flex: 1 }}>{list.title}</Link>
-      <span style={{ fontSize: 12, color: '#666', whiteSpace: 'nowrap' }}>
-        {list.itemCount} item{list.itemCount !== 1 ? 's' : ''} · Owner: {list.ownerName}
-      </span>
-      {list.role === 'Owner' && (
-        <button
-          onClick={() => handleDelete(list)}
-          disabled={deletingId === list.id}
-          style={{ background: 'none', border: 'none', color: '#c00', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          {deletingId === list.id ? 'Deleting…' : 'Delete'}
-        </button>
-      )}
-    </li>
+    <Paper key={list.id} p="sm" radius="md" withBorder>
+      <Group gap="sm" wrap="nowrap">
+        <Anchor component={Link} to={`/lists/${list.id}`} fw={600} flex={1} truncate>
+          {list.title}
+        </Anchor>
+        <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+          {list.itemCount} item{list.itemCount !== 1 ? 's' : ''} · {list.ownerName}
+        </Text>
+        {list.role === 'Owner' && (
+          <Button
+            variant="subtle"
+            color="red"
+            size="xs"
+            loading={deletingId === list.id}
+            onClick={() => handleDelete(list)}
+          >
+            Delete
+          </Button>
+        )}
+      </Group>
+    </Paper>
+  )
+
+  const closedRow = (list: TodoList) => (
+    <Paper key={list.id} p="sm" radius="md" withBorder style={{ opacity: 0.7 }}>
+      <Group gap="sm" wrap="nowrap">
+        <Anchor component={Link} to={`/lists/${list.id}`} fw={600} flex={1} truncate c="dimmed">
+          {list.title}
+        </Anchor>
+        <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+          {list.itemCount} item{list.itemCount !== 1 ? 's' : ''} · {list.ownerName}
+        </Text>
+        {list.role === 'Owner' && (
+          <Button
+            variant="subtle"
+            color="red"
+            size="xs"
+            loading={deletingId === list.id}
+            onClick={() => handleDelete(list)}
+          >
+            Delete
+          </Button>
+        )}
+      </Group>
+    </Paper>
   )
 
   return (
-    <div style={{ maxWidth: 640, margin: '40px auto', padding: '0 16px' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1>HoneyDo</h1>
-        <span style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
+    <Container size="md" pt="xl">
+      <Group justify="space-between" mb="lg">
+        <Title order={1}>HoneyDo</Title>
+        <Group gap="xs">
+          <UnstyledButton
             onClick={() => navigate('/profile')}
-            style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: 0 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
           >
             <AvatarCircle avatarUrl={avatarUrl} displayName={displayName ?? ''} size={28} />
-            {displayName}
-          </button>
-          <button onClick={() => navigate('/friends')} style={{ background: 'none', border: 'none', color: '#666', fontSize: 14, cursor: 'pointer' }}>Friends</button>
-          <button onClick={logout} style={{ background: 'none', border: 'none', color: '#666', fontSize: 14, cursor: 'pointer' }}>Sign out</button>
-        </span>
-      </header>
+            <Text size="sm">{displayName}</Text>
+          </UnstyledButton>
+          <Button variant="subtle" color="gray" size="xs" onClick={() => navigate('/friends')}>
+            Friends
+          </Button>
+          <Button variant="subtle" color="gray" size="xs" onClick={logout}>
+            Sign out
+          </Button>
+        </Group>
+      </Group>
 
-      <form onSubmit={handleCreate} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <input
-          style={{ flex: 1 }}
-          placeholder="New list title…"
-          value={newTitle}
-          onChange={e => setNewTitle(e.target.value)}
-          required
-        />
-        <button type="submit">Create</button>
+      <form onSubmit={handleCreate}>
+        <Group gap="sm" mb="md">
+          <TextInput
+            flex={1}
+            placeholder="New list title…"
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            required
+          />
+          <Button type="submit">Create</Button>
+        </Group>
       </form>
-      {error && <p style={{ color: 'red', fontSize: 14, marginBottom: 12 }}>{error}</p>}
 
-      {loading ? <p>Loading…</p> : (
-        <>
+      {error && (
+        <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />} mb="md">
+          {error}
+        </Alert>
+      )}
+
+      {loading ? (
+        <Group justify="center" mt="xl"><Loader size="sm" /></Group>
+      ) : (
+        <Stack gap="xl">
           {/* Active lists */}
-          <section style={{ marginBottom: closedLists.length > 0 ? 32 : 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <h2 style={{ fontSize: 13, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, flexShrink: 0 }}>
+          <section>
+            <Group gap="sm" mb="xs" align="center">
+              <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em', flexShrink: 0 }}>
                 Active
-              </h2>
+              </Text>
               {activeLists.length > 0 && (
-                <input
-                  type="search"
+                <TextInput
+                  flex={1}
+                  size="xs"
                   placeholder="Search lists…"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  style={{ flex: 1, fontSize: 13, padding: '3px 8px' }}
+                  leftSection={<IconSearch size={12} />}
                 />
               )}
-            </div>
+            </Group>
             {activeLists.length === 0 ? (
-              <p style={{ color: '#666', fontSize: 14 }}>No active lists. Create one above.</p>
+              <Text size="sm" c="dimmed">No active lists. Create one above.</Text>
             ) : filteredActiveLists.length === 0 ? (
-              <p style={{ color: '#666', fontSize: 14 }}>No lists match "{search.trim()}".</p>
+              <Text size="sm" c="dimmed">No lists match "{search.trim()}".</Text>
             ) : (
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {filteredActiveLists.map(listRow)}
-              </ul>
+              <Stack gap="sm">{filteredActiveLists.map(listRow)}</Stack>
             )}
           </section>
 
           {/* Closed lists */}
           {closedLists.length > 0 && (
             <section>
-              <h2 style={{ fontSize: 13, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>
+              <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb="xs" style={{ letterSpacing: '0.05em' }}>
                 Closed
-              </h2>
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {closedLists.map(list => (
-                  <li key={list.id} style={{ background: '#fafafa', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.8 }}>
-                    <Link to={`/lists/${list.id}`} style={{ fontWeight: 600, flex: 1, color: '#888' }}>{list.title}</Link>
-                    <span style={{ fontSize: 12, color: '#999', whiteSpace: 'nowrap' }}>
-                      {list.itemCount} item{list.itemCount !== 1 ? 's' : ''} · Owner: {list.ownerName}
-                    </span>
-                    {list.role === 'Owner' && (
-                      <button
-                        onClick={() => handleDelete(list)}
-                        disabled={deletingId === list.id}
-                        style={{ background: 'none', border: 'none', color: '#c00', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                      >
-                        {deletingId === list.id ? 'Deleting…' : 'Delete'}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              </Text>
+              <Stack gap="sm">{closedLists.map(closedRow)}</Stack>
             </section>
           )}
-        </>
+        </Stack>
       )}
-    </div>
+    </Container>
   )
 }
