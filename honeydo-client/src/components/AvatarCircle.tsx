@@ -18,7 +18,7 @@ export default function AvatarCircle({ avatarUrl, displayName, size = 32 }: Prop
       src={avatarUrl ?? undefined}
       radius="xl"
       size={size}
-      color="blue"
+      color="brand"
       style={{ flexShrink: 0 }}
     >
       {initial}

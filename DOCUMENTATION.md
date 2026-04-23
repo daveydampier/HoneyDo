@@ -106,7 +106,7 @@ Profile ──< ListMember >── TodoList ──< TodoItem >── TodoItemTag
 | `Profile` | User account. Stores credentials, display info, and soft-delete marker. |
 | `TodoList` | Container for items. Has members, a title, and optional `ClosedAt` timestamp. Soft-deletable. |
 | `ListMember` | Join table between Profile and TodoList carrying the member's `Role`. |
-| `TodoItem` | An individual task. Has content, status, optional notes, due date, and assignment. Soft-deletable. |
+| `TodoItem` | An individual task. Has content, status, optional notes, due date, assignment, and a star flag. Soft-deletable. |
 | `TaskStatus` | Lookup table (seeded): Not Started, Partial, Complete, Abandoned. |
 | `Tag` | A user-owned label with a hex colour. Scoped to the owning profile. |
 | `TodoItemTag` | Join table between TodoItem and Tag (many-to-many). |
@@ -180,6 +180,18 @@ Friend queries (for both the friends list and addable-friends list) use two sepa
 When sorting items by due date ascending, the query uses `OrderBy(i => i.DueDate == null).ThenBy(i => i.DueDate)`. This ensures items with no due date always appear at the bottom regardless of sort direction.
 
 **Reasoning:** SQLite sorts NULLs before non-null values in ascending order. Surfacing undated tasks above dated ones is counterintuitive — users want to see approaching deadlines first.
+
+### 4.11 Three-Tier Item Sort Priority
+
+All item queries apply a fixed three-tier sort before the user's chosen sort column:
+
+1. **Active before resolved** — Not Started (1) and Partial (2) tasks sort before Complete (3) and Abandoned (4), regardless of the user's selected column or direction.
+2. **Starred before unstarred** — Within each activity group, starred tasks (`IsStarred = true`) float to the top.
+3. **User sort** — Within each star sub-group, items are ordered by the requested column (`DueDate` or `CreatedAt`) and direction.
+
+This priority is implemented on the backend using EF Core's `OrderBy().ThenBy()` chain and is mirrored on the frontend in a `sortItems()` pure function so mutations (star toggle, status change, due date edit) instantly re-sort the list without a round-trip.
+
+**Reasoning:** Completed and abandoned tasks are "done" work; demoting them to the bottom keeps the actionable work visible without the user having to filter. Starring is an explicit "pay attention to this" signal that should survive any sort column choice.
 
 ---
 
@@ -403,7 +415,20 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
 { "id": "guid", "actionType": "string", "actorName": "string", "detail": "string|null", "timestamp": "datetime" }
 ```
 
-**Activity action types:** `ItemCreated`, `StatusChanged`, `ItemDeleted`, `MemberAdded`, `ListClosed`. The `detail` field carries a short human-readable context string (task name, status transition arrow like `Buy milk → Complete`, member display name).
+**Activity action types:**
+
+| Action type | When logged | `detail` content |
+|---|---|---|
+| `ItemCreated` | Task added to list | Task content (truncated to 80 chars) |
+| `StatusChanged` | Task status cycled | `"<content> → <new status>"` |
+| `ItemDeleted` | Task deleted | Task content |
+| `MemberAdded` | Collaborator added | New member's display name |
+| `ListClosed` | List closed by owner | — |
+| `TagAdded` | Tag applied to a task (only on first application) | `"\"<tag name>\" on <task content>"` |
+| `TagRemoved` | Tag removed from a task | `"\"<tag name>\" from <task content>"` |
+| `NotesUpdated` | Task notes changed to a different value | Task content |
+
+> **Idempotency:** `TagAdded` is only logged when the tag is genuinely new — re-applying an already-applied tag produces no duplicate log entry. `NotesUpdated` is only logged when the submitted notes value differs from the stored value.
 
 **List close business rules:**
 - Only the Owner can close a list
@@ -421,7 +446,7 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
 | Get items (paged) | `GET` | `/api/lists/{listId}/items` | Bearer (Member) | `?page&pageSize&search&statusIds&sortBy&ascending` | `200` `PagedResult<TodoItemResponse>` |
 | Get item by ID | `GET` | `/api/lists/{listId}/items/{itemId}` | Bearer (Member) | — | `200` `TodoItemResponse` |
 | Create item | `POST` | `/api/lists/{listId}/items` | Bearer (Member) | `{ content, notes?, dueDate?, assignedToId? }` | `201` `TodoItemResponse` |
-| Update item | `PATCH` | `/api/lists/{listId}/items/{itemId}` | Bearer (Member) | `{ content?, statusId?, notes?, dueDate?, assignedToId?, clearDueDate?, clearAssignee? }` | `200` `TodoItemResponse` |
+| Update item | `PATCH` | `/api/lists/{listId}/items/{itemId}` | Bearer (Member) | `{ content?, statusId?, notes?, dueDate?, assignedToId?, clearDueDate?, clearAssignee?, isStarred? }` | `200` `TodoItemResponse` |
 | Delete item | `DELETE` | `/api/lists/{listId}/items/{itemId}` | Bearer (Member) | — | `204` |
 
 **Query parameters for GET items:**
@@ -444,6 +469,7 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
   "status": { "id": 1, "name": "Not Started" },
   "notes": "string|null",
   "dueDate": "YYYY-MM-DD|null",
+  "isStarred": false,
   "assignedTo": { "id": "guid", "displayName": "string" } | null,
   "tags": [{ "id": "guid", "name": "string", "color": "#RRGGBB" }],
   "createdAt": "datetime",
@@ -643,6 +669,7 @@ dotnet run --project HoneyDo/HoneyDo.csproj
 | `20260422180000_AddListClose` | `ClosedAt` nullable column on `TodoLists` |
 | `20260422190000_AddActivityLogDetail` | `Detail TEXT(200) NULL` column on `ActivityLogs` |
 | `20260423090000_RemoveProfileDeletedAt` | Drop unused `DeletedAt` column from `Profiles` |
+| `20260423220309_AddIsStarredToItems` | `IsStarred BIT NOT NULL DEFAULT 0` column on `TodoItems` |
 
 ---
 
@@ -662,14 +689,17 @@ dotnet run --project HoneyDo/HoneyDo.csproj
 
 ### List Detail Page Features
 
-- **Sort toolbar**: Switch between Due Date and Created Date sorting; toggle ascending/descending. Default is Due Date ascending (earliest first, undated tasks at bottom).
+- **Sort toolbar**: Switch between Due Date and Created Date sorting; toggle ascending/descending with the sort-direction icon button. Default is Due Date ascending (earliest first, undated tasks at bottom).
+- **Sort priority**: Regardless of the chosen sort column, the list always applies a three-tier priority: active tasks (Not Started / Partial) before resolved (Complete / Abandoned) → starred tasks before unstarred → user's chosen sort column. See §4.11 for details.
 - **Column headers**: Status · Task · Created · Due Date · (actions)
-- **Notes**: Displayed as italic gray text below task content. Click "+ Add note" or "Edit" to open the edit form which includes a notes textarea with a 256-character counter.
+- **Star**: Each task row has a star icon (☆/★). Clicking it toggles the `isStarred` flag, which immediately re-sorts the list so starred tasks float to the top of the active group. Stars persist across sessions.
+- **Notes**: Displayed as italic gray text below task content. Click "+ Add note" or the pencil icon to open the edit form which includes a notes textarea with a 256-character counter.
+- **Edit form fields**: Content (text), Due Date (native date picker with a "Clear" link), Notes (textarea), Tags. Saving re-sorts the list instantly if the due date changed position.
 - **Members panel**: Toggle with the Members button in the header. Shows all members with role badges. Owners can remove contributors and add accepted friends as collaborators directly.
-- **Close List button**: Green when all tasks are resolved (Partial/Complete/Abandoned); grayed-out with a tooltip when not eligible. Confirm dialog before closing.
-- **Read-only mode**: When a list is closed, the new-task form is hidden, status buttons become plain labels, and Edit/Delete/Add Note actions are hidden.
-- **Tags**: During task editing, a tag picker shows all tags available on the list (including co-members' tags). Clicking a tag pill toggles it on/off for that task. Applied tags appear as colored badges below the task content in view mode.
-- **Activity log**: Each list has a chronological activity feed accessible via the Activity button in the list header. Entries record who performed an action, what it was, and a brief detail (task name, status transition, member name).
+- **Close List button**: Enabled when all tasks are resolved (Partial/Complete/Abandoned); disabled with a tooltip when not eligible. Confirm dialog before closing.
+- **Read-only mode**: When a list is closed, the new-task form is hidden, status buttons become plain labels, and edit/delete/add-note actions are hidden. Stars remain interactive.
+- **Tags**: A tag popover button in the new-task creation bar lets you pre-select tags before adding a task. During editing, a tag picker shows all tags available on the list (including co-members' tags). Applied tags appear as colored badges below the task content in view mode.
+- **Activity log**: Each list has a chronological activity feed accessible via the Activity button in the list header. Entries record who performed an action, what it was, and a brief detail. Tracked actions include task creation/deletion/status changes, member additions, list close, and tag apply/remove/notes changes.
 
 ### Lists Page Sections
 
@@ -695,7 +725,7 @@ The preference is persisted in `localStorage` under the key `honeydo-color-schem
 TodoList         // id, title, role, ownerName, contributorNames, memberCount,
                  // notStartedCount, partialCount, completeCount, abandonedCount,
                  // createdAt, updatedAt, closedAt, tags
-TodoItem         // id, listId, content, status, notes, dueDate, assignedTo, tags, createdAt, updatedAt
+TodoItem         // id, listId, content, status, notes, dueDate, isStarred, assignedTo, tags, createdAt, updatedAt
 Tag              // id, name, color
 Member           // profileId, displayName, avatarUrl, role, joinedAt
 AddableFriend    // profileId, displayName, email, avatarUrl

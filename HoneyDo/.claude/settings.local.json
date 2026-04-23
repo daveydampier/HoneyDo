@@ -57,7 +57,16 @@
       "Bash(del \"C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo\\\\HoneyDo.Tests\\\\Integration\\\\DiagnosticTest.cs\")",
       "Bash(npm run *)",
       "WebFetch(domain:mantine.dev)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(find \"C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo\\\\honeydo-client\\\\src\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec wc -l {} \\\\;)",
+      "Bash(awk '{sum+=$1} END {print \"Total lines:\", sum}')",
+      "Bash(find \"C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo\\\\HoneyDo\" -type f -name \"*.cs\" -exec wc -l {} \\\\;)",
+      "Bash(awk '{sum+=$1} END {print \"Total backend lines:\", sum}')",
+      "Bash(find \"C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo\\\\honeydo-client\\\\src\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec sh -c 'wc -l \"$1\" | awk \"{print \\\\$1, \\\\\"$1\\\\\"}\"' _ {} \\\\;)",
+      "Bash(xargs wc *)",
+      "Bash(cd /tmp)",
+      "Read(//mnt/c/Users/davey/source/repos/HoneyDo/HoneyDo.Tests/**)",
+      "Bash(find HoneyDo.Tests/Integration -type f -name \"*.cs\" -exec wc -l {} +)"
     ]
   }
 }

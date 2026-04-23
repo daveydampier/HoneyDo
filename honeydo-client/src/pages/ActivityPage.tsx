@@ -82,7 +82,7 @@ export default function ActivityPage() {
       {loading && <Group justify="center" mt="xl"><Loader size="sm" /></Group>}
 
       {error && (
-        <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />}>
+        <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={16} />}>
           {error}
         </Alert>
       )}

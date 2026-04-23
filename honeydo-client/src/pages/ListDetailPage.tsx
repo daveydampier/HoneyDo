@@ -12,11 +12,11 @@ import {
 import {
   IconAlertCircle, IconSortAscending, IconSortDescending,
   IconActivity, IconUsers, IconStar, IconStarFilled,
-  IconTag, IconChevronDown,
+  IconTag, IconChevronDown, IconPencil, IconTrash,
 } from '@tabler/icons-react'
 
 const STATUS_LABELS: Record<number, string> = { 1: 'Not Started', 2: 'Partial', 3: 'Complete', 4: 'Abandoned' }
-const STATUS_COLORS: Record<number, string> = { 1: 'gray', 2: 'yellow', 3: 'green', 4: 'red' }
+const STATUS_COLORS: Record<number, string> = { 1: 'gray', 2: 'gold', 3: 'brand', 4: 'tangerine' }
 const NOTES_MAX = 256
 
 /** Mirror the backend sort priority so mutations instantly re-order the list. */
@@ -84,6 +84,7 @@ export default function ListDetailPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [editNotes, setEditNotes] = useState('')
+  const [editDueDate, setEditDueDate] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
 
   const [myTags, setMyTags] = useState<Tag[]>([])
@@ -241,12 +242,14 @@ export default function ListDetailPage() {
     setEditingId(item.id)
     setEditContent(item.content)
     setEditNotes(item.notes ?? '')
+    setEditDueDate(item.dueDate ?? '')
     setEditTagIds(new Set(item.tags.map(t => t.id)))
     setEditError(null)
   }
 
   function cancelEdit() {
     setEditingId(null)
+    setEditDueDate('')
     setEditTagIds(new Set())
     setEditError(null)
   }
@@ -282,12 +285,13 @@ export default function ListDetailPage() {
       const updated = await api.patch<TodoItem>(`/lists/${listId}/items/${id}`, {
         content: editContent,
         notes: editNotes,
+        ...(editDueDate ? { dueDate: editDueDate } : { clearDueDate: true }),
       })
-      setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
+      setItems(prev => sortItems(prev.map(i => i.id === updated.id ? updated : i), sortBy, ascending))
       setEditingId(null)
     } catch (err) {
       const apiErr = err as ApiError
-      setEditError(apiErr.errors?.Content?.[0] ?? apiErr.errors?.Notes?.[0] ?? apiErr.title)
+      setEditError(apiErr.errors?.Content?.[0] ?? apiErr.errors?.Notes?.[0] ?? apiErr.errors?.DueDate?.[0] ?? apiErr.title)
     }
   }
 
@@ -309,13 +313,13 @@ export default function ListDetailPage() {
       <Group justify="space-between" mt="sm" mb="md" wrap="nowrap" align="flex-start">
         <Group gap="sm" align="center">
           <Title order={1}>{list?.title ?? 'Tasks'}</Title>
-          {isClosed && <Badge color="green" variant="light">Closed</Badge>}
+          {isClosed && <Badge color="brand" variant="light">Closed</Badge>}
         </Group>
         <Group gap="xs" wrap="nowrap">
           {isOwner && !isClosed && (
             <Button
               size="xs"
-              color="green"
+              color="brand"
               disabled={!canClose}
               title={!canClose ? 'All tasks must be Partial, Complete, or Abandoned to close this list' : 'Close this list'}
               onClick={handleClose}
@@ -344,7 +348,7 @@ export default function ListDetailPage() {
 
       {/* Closed banner */}
       {isClosed && (
-        <Alert color="green" variant="light" mb="md">
+        <Alert color="brand" variant="light" mb="md">
           ✅ This list was closed on {formatDate(list!.closedAt!)} and is now read-only.
         </Alert>
       )}
@@ -355,7 +359,7 @@ export default function ListDetailPage() {
           <Title order={4} mb="sm">Members</Title>
 
           {memberError && (
-            <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />} mb="sm">
+            <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={14} />} mb="sm">
               {memberError}
             </Alert>
           )}
@@ -366,7 +370,7 @@ export default function ListDetailPage() {
                 <Text size="sm" fw={600} flex={1}>{m.displayName}</Text>
                 <Badge
                   size="xs"
-                  color={m.role === 'Owner' ? 'blue' : 'gray'}
+                  color={m.role === 'Owner' ? 'aqua' : 'gray'}
                   variant="filled"
                 >
                   {m.role}
@@ -374,7 +378,7 @@ export default function ListDetailPage() {
                 {isOwner && m.role !== 'Owner' && m.profileId !== profileId && (
                   <Button
                     variant="subtle"
-                    color="red"
+                    color="tangerine"
                     size="xs"
                     onClick={() => handleRemoveMember(m.profileId, m.displayName)}
                   >
@@ -417,7 +421,7 @@ export default function ListDetailPage() {
       {/* Action error (status cycle / delete / close) */}
       {actionError && (
         <Alert
-          color="red"
+          color="tangerine"
           variant="light"
           icon={<IconAlertCircle size={14} />}
           withCloseButton
@@ -501,7 +505,7 @@ export default function ListDetailPage() {
                       leftSection={<IconTag size={13} />}
                       rightSection={
                         createTagIds.size > 0
-                          ? <Badge size="xs" circle variant="white" color="blue">{createTagIds.size}</Badge>
+                          ? <Badge size="xs" circle variant="white" color="aqua">{createTagIds.size}</Badge>
                           : <IconChevronDown size={11} />
                       }
                       onClick={() => setCreateTagPopoverOpen(o => !o)}
@@ -548,7 +552,7 @@ export default function ListDetailPage() {
               <Button type="submit">Add</Button>
             </Group>
             {createError && (
-              <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
+              <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
                 {createError}
               </Alert>
             )}
@@ -588,6 +592,29 @@ export default function ListDetailPage() {
                     placeholder="Task content"
                   />
 
+                  <Group gap="xs" align="center">
+                    <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>Due date</Text>
+                    <input
+                      type="date"
+                      value={editDueDate}
+                      onChange={e => setEditDueDate(e.target.value)}
+                      style={{
+                        fontSize: 13,
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        border: '1px solid var(--mantine-color-default-border)',
+                        background: 'var(--mantine-color-default)',
+                        color: 'var(--mantine-color-text)',
+                        colorScheme: 'inherit',
+                      }}
+                    />
+                    {editDueDate && (
+                      <Anchor size="xs" c="dimmed" style={{ cursor: 'pointer' }} onClick={() => setEditDueDate('')}>
+                        Clear
+                      </Anchor>
+                    )}
+                  </Group>
+
                   <div style={{ position: 'relative' }}>
                     <Textarea
                       value={editNotes}
@@ -599,7 +626,7 @@ export default function ListDetailPage() {
                     />
                     <Text
                       size="xs"
-                      c={editNotes.length > NOTES_MAX - 20 ? 'red' : 'dimmed'}
+                      c={editNotes.length > NOTES_MAX - 20 ? 'tangerine' : 'dimmed'}
                       style={{ position: 'absolute', bottom: 6, right: 8, pointerEvents: 'none' }}
                     >
                       {editNotes.length}/{NOTES_MAX}
@@ -639,7 +666,7 @@ export default function ListDetailPage() {
                   )}
 
                   {editError && (
-                    <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
+                    <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
                       {editError}
                     </Alert>
                   )}
@@ -694,7 +721,7 @@ export default function ListDetailPage() {
                     <Text
                       size="xs"
                       fw={isOverdue(item.dueDate, item.status.id) ? 600 : 400}
-                      c={isOverdue(item.dueDate, item.status.id) ? 'red' : 'dimmed'}
+                      c={isOverdue(item.dueDate, item.status.id) ? 'tangerine' : 'dimmed'}
                       style={{ width: 90, flexShrink: 0 }}
                     >
                       {item.dueDate
@@ -709,7 +736,7 @@ export default function ListDetailPage() {
                       <ActionIcon
                         size="xs"
                         variant="subtle"
-                        color={item.isStarred ? 'yellow' : 'gray'}
+                        color={item.isStarred ? 'gold' : 'gray'}
                         loading={starringId === item.id}
                         aria-label={item.isStarred ? 'Unstar task' : 'Star task'}
                         onClick={() => handleStar(item)}
@@ -720,8 +747,24 @@ export default function ListDetailPage() {
                       </ActionIcon>
                       {!isClosed && (
                         <>
-                          <Button variant="subtle" size="xs" onClick={() => startEdit(item)}>Edit</Button>
-                          <Button variant="subtle" color="red" size="xs" onClick={() => handleDelete(item.id)}>Delete</Button>
+                          <ActionIcon
+                            size="xs"
+                            variant="subtle"
+                            color="gray"
+                            aria-label="Edit task"
+                            onClick={() => startEdit(item)}
+                          >
+                            <IconPencil size={14} />
+                          </ActionIcon>
+                          <ActionIcon
+                            size="xs"
+                            variant="subtle"
+                            color="tangerine"
+                            aria-label="Delete task"
+                            onClick={() => handleDelete(item.id)}
+                          >
+                            <IconTrash size={14} />
+                          </ActionIcon>
                         </>
                       )}
                     </Group>
