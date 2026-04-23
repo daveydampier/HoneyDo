@@ -1,4 +1,5 @@
 using HoneyDo.Common.Extensions;
+using HoneyDo.Features.Items;
 using HoneyDo.Features.Lists;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -50,6 +51,10 @@ public class ListsController(IMediator mediator) : ControllerBase
     [HttpGet("{listId:guid}/addable-friends")]
     public async Task<ActionResult<IEnumerable<AddableFriendResponse>>> GetAddableFriends(Guid listId, CancellationToken ct) =>
         Ok(await mediator.Send(new GetAddableFriendsQuery(listId, User.GetProfileId()), ct));
+
+    [HttpGet("{listId:guid}/tags")]
+    public async Task<ActionResult<IEnumerable<TagDto>>> GetTags(Guid listId, CancellationToken ct) =>
+        Ok(await mediator.Send(new GetListTagsQuery(listId, User.GetProfileId()), ct));
 
     [HttpGet("{listId:guid}/activity")]
     public async Task<ActionResult<IEnumerable<ActivityLogResponse>>> GetActivity(Guid listId, CancellationToken ct) =>

@@ -1,4 +1,3 @@
-using FluentValidation;
 using HoneyDo.Common.Exceptions;
 using HoneyDo.Data;
 using HoneyDo.Domain;
@@ -23,10 +22,12 @@ public class ApplyTagCommandHandler(AppDbContext db) : IRequestHandler<ApplyTagC
 
         if (!itemExists) throw new NotFoundException();
 
-        var tagOwned = await db.Tags
-            .AnyAsync(t => t.Id == request.TagId && t.ProfileId == request.ProfileId, ct);
+        // The tag must belong to any current member of this list (not just the caller).
+        var tagBelongsToMember = await db.Tags
+            .AnyAsync(t => t.Id == request.TagId &&
+                db.ListMembers.Any(m => m.ListId == request.ListId && m.ProfileId == t.ProfileId), ct);
 
-        if (!tagOwned) throw new NotFoundException();
+        if (!tagBelongsToMember) throw new NotFoundException();
 
         var alreadyApplied = await db.TodoItemTags
             .AnyAsync(t => t.ItemId == request.ItemId && t.TagId == request.TagId, ct);

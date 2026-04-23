@@ -85,8 +85,9 @@ export default function ListDetailPage() {
   }, [listId, sortBy, ascending])
 
   useEffect(() => {
-    api.get<Tag[]>('/tags').then(setMyTags).catch(() => {})
-  }, [])
+    if (!listId) return
+    api.get<Tag[]>(`/lists/${listId}/tags`).then(setMyTags).catch(() => {})
+  }, [listId])
 
   useEffect(() => {
     if (!showMembers || !listId) return
