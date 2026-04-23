@@ -13,8 +13,12 @@ public record TodoListResponse(
     string Title,
     MemberRole Role,
     string OwnerName,
+    IEnumerable<string> ContributorNames,
     int MemberCount,
-    int ItemCount,
+    int NotStartedCount,
+    int PartialCount,
+    int CompleteCount,
+    int AbandonedCount,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     DateTime? ClosedAt,
@@ -31,7 +35,10 @@ public class GetListsQueryHandler(AppDbContext db) : IRequestHandler<GetListsQue
                 m.ListId,
                 m.Role,
                 ListTitle = m.List.Title,
-                ItemCount = m.List.Items.Count,
+                NotStartedCount = m.List.Items.Count(i => i.StatusId == 1),
+                PartialCount    = m.List.Items.Count(i => i.StatusId == 2),
+                CompleteCount   = m.List.Items.Count(i => i.StatusId == 3),
+                AbandonedCount  = m.List.Items.Count(i => i.StatusId == 4),
                 MemberCount = m.List.Members.Count,
                 ListCreatedAt = m.List.CreatedAt,
                 ListUpdatedAt = m.List.UpdatedAt,
@@ -41,11 +48,20 @@ public class GetListsQueryHandler(AppDbContext db) : IRequestHandler<GetListsQue
 
         var listIds = memberships.Select(m => m.ListId).ToList();
 
-        // Separate query to reliably resolve owner DisplayName via Profiles join
-        var ownerNames = await db.ListMembers
-            .Where(m => listIds.Contains(m.ListId) && m.Role == MemberRole.Owner)
-            .Select(m => new { m.ListId, m.Profile.DisplayName })
-            .ToDictionaryAsync(m => m.ListId, m => m.DisplayName, ct);
+        // Separate query to reliably resolve member DisplayNames via Profiles join
+        var memberNames = await db.ListMembers
+            .Where(m => listIds.Contains(m.ListId))
+            .Select(m => new { m.ListId, m.Role, m.Profile.DisplayName })
+            .ToListAsync(ct);
+
+        var ownerNames = memberNames
+            .Where(m => m.Role == MemberRole.Owner)
+            .ToDictionary(m => m.ListId, m => m.DisplayName);
+
+        var contributorsByList = memberNames
+            .Where(m => m.Role == MemberRole.Contributor)
+            .GroupBy(m => m.ListId)
+            .ToDictionary(g => g.Key, g => g.Select(m => m.DisplayName).ToList());
 
         // Distinct tags applied to any item in each list
         var rawTags = await db.TodoItemTags
@@ -63,8 +79,12 @@ public class GetListsQueryHandler(AppDbContext db) : IRequestHandler<GetListsQue
             m.ListTitle,
             m.Role,
             ownerNames.GetValueOrDefault(m.ListId) ?? "Unknown",
+            contributorsByList.GetValueOrDefault(m.ListId) ?? [],
             m.MemberCount,
-            m.ItemCount,
+            m.NotStartedCount,
+            m.PartialCount,
+            m.CompleteCount,
+            m.AbandonedCount,
             m.ListCreatedAt,
             m.ListUpdatedAt,
             m.ListClosedAt,
