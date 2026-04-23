@@ -323,10 +323,12 @@ C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\refs\System.
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\refs\System.Xml.XPath.XDocument.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\refs\WindowsBase.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\BCrypt.Net-Next.dll
+C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\FluentAssertions.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\FluentValidation.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\FluentValidation.AspNetCore.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\FluentValidation.DependencyInjectionExtensions.dll
+C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\MailKit.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\MediatR.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\MediatR.Contracts.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
@@ -355,6 +357,7 @@ C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\Microsoft.Te
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\Microsoft.TestPlatform.CrossPlatEngine.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\Microsoft.TestPlatform.Utilities.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\Microsoft.VisualStudio.TestPlatform.Common.dll
+C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\MimeKit.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\Newtonsoft.Json.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\Scalar.AspNetCore.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\SQLitePCLRaw.batteries_v2.dll
@@ -460,13 +463,10 @@ C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Test
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.AssemblyInfoInputs.cache
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.AssemblyInfo.cs
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.csproj.CoreCompileInputs.cache
+C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.sourcelink.json
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo..26E09FA9.Up2Date
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\refint\HoneyDo.Tests.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.pdb
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.genruntimeconfig.cache
 C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\ref\HoneyDo.Tests.dll
-C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
-C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\MailKit.dll
-C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\bin\Debug\net10.0\MimeKit.dll
-C:\Users\davey\source\repos\HoneyDo\HoneyDo.Tests\obj\Debug\net10.0\HoneyDo.Tests.sourcelink.json
