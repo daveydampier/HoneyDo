@@ -32,6 +32,7 @@ HoneyDo is a collaborative to-do list application with a React frontend and an A
 | Email | MailKit (SMTP with dev console fallback) |
 | Testing | xUnit + WebApplicationFactory + EF InMemory |
 | Frontend | React + TypeScript (Vite) |
+| Frontend UI | Mantine UI v7 + Tabler Icons |
 
 ---
 
@@ -357,6 +358,8 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
 | Close list | `POST` | `/api/lists/{listId}/close` | Bearer (Owner) | — | `200` `TodoListResponse` |
 | Delete list | `DELETE` | `/api/lists/{listId}` | Bearer (Owner) | — | `204` |
 | Get addable friends | `GET` | `/api/lists/{listId}/addable-friends` | Bearer (Member) | — | `200` `AddableFriendResponse[]` |
+| Get list tags     | `GET`  | `/api/lists/{listId}/tags`     | Bearer (Member) | —  | `200` `TagDto[]` |
+| Get activity log  | `GET`  | `/api/lists/{listId}/activity` | Bearer (Member) | —  | `200` `ActivityLogResponse[]` |
 
 **TodoListResponse shape:**
 ```json
@@ -365,11 +368,16 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
   "title": "string",
   "role": "Owner|Contributor",
   "ownerName": "string",
+  "contributorNames": ["string"],
   "memberCount": 0,
-  "itemCount": 0,
+  "notStartedCount": 0,
+  "partialCount": 0,
+  "completeCount": 0,
+  "abandonedCount": 0,
   "createdAt": "datetime",
   "updatedAt": "datetime",
-  "closedAt": "datetime|null"
+  "closedAt": "datetime|null",
+  "tags": [{ "id": "guid", "name": "string", "color": "#RRGGBB" }]
 }
 ```
 
@@ -382,6 +390,18 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
   "avatarUrl": "string|null"
 }
 ```
+
+**TagDto shape:**
+```json
+{ "id": "guid", "name": "string", "color": "#RRGGBB" }
+```
+
+**ActivityLogResponse shape:**
+```json
+{ "id": "guid", "actionType": "string", "actorName": "string", "detail": "string|null", "timestamp": "datetime" }
+```
+
+**Activity action types:** `ItemCreated`, `StatusChanged`, `ItemDeleted`, `MemberAdded`, `ListClosed`. The `detail` field carries a short human-readable context string (task name, status transition arrow like `Buy milk → Complete`, member display name).
 
 **List close business rules:**
 - Only the Owner can close a list
@@ -484,6 +504,8 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
 | Delete tag | `DELETE` | `/api/tags/{tagId}` | Bearer (Owner) | — | `204` |
 | Apply tag to item | `POST` | `/api/lists/{listId}/items/{itemId}/tags/{tagId}` | Bearer (Member) | — | `204` |
 | Remove tag from item | `DELETE` | `/api/lists/{listId}/items/{itemId}/tags/{tagId}` | Bearer (Member) | — | `204` |
+
+> **Note:** `GET /api/tags` returns only the calling user's own tags (for their profile tag library). To get all tags available to apply on a specific list (including co-members' tags), use `GET /api/lists/{listId}/tags`.
 
 ---
 
@@ -617,6 +639,8 @@ dotnet run --project HoneyDo/HoneyDo.csproj
 | `20260421145325_AddFriends` | Friend relationship table |
 | `20260422171449_AddInvitations` | Invitation table for email-based friend invites |
 | `20260422180000_AddListClose` | `ClosedAt` nullable column on `TodoLists` |
+| `20260422190000_AddActivityLogDetail` | `Detail TEXT(200) NULL` column on `ActivityLogs` |
+| `20260423090000_RemoveProfileDeletedAt` | Drop unused `DeletedAt` column from `Profiles` |
 
 ---
 
@@ -632,6 +656,7 @@ dotnet run --project HoneyDo/HoneyDo.csproj
 | `ProfilePage` | `/profile` | View and update display name, phone number, avatar URL, and password. |
 | `LoginPage` | `/login` | Email/password authentication. |
 | `RegisterPage` | `/register` | Account creation. Handles invite links (`?invite=token&email=...`). |
+| `ActivityPage` | `/lists/:listId/activity` | Chronological activity log for a list (newest first). Shows actor, action, and detail. |
 
 ### List Detail Page Features
 
@@ -641,17 +666,24 @@ dotnet run --project HoneyDo/HoneyDo.csproj
 - **Members panel**: Toggle with the Members button in the header. Shows all members with role badges. Owners can remove contributors and add accepted friends as collaborators directly.
 - **Close List button**: Green when all tasks are resolved (Partial/Complete/Abandoned); grayed-out with a tooltip when not eligible. Confirm dialog before closing.
 - **Read-only mode**: When a list is closed, the new-task form is hidden, status buttons become plain labels, and Edit/Delete/Add Note actions are hidden.
+- **Tags**: During task editing, a tag picker shows all tags available on the list (including co-members' tags). Clicking a tag pill toggles it on/off for that task. Applied tags appear as colored badges below the task content in view mode.
+- **Activity log**: Each list has a chronological activity feed accessible via the Activity button in the list header. Entries record who performed an action, what it was, and a brief detail (task name, status transition, member name).
 
 ### Lists Page Sections
 
-- **Active**: All lists without a `closedAt` value, in their natural API order.
-- **Closed**: All lists with a `closedAt` value, sorted most-recently-closed first. Dimmed styling (`opacity: 0.8`, `#fafafa` background). Only shown when at least one closed list exists.
+- **Active**: All lists without a `closedAt` value. Displays per-status task counts (not started / partial / complete / abandoned — only non-zero statuses shown, each color-coded). Shows Owner and Collaborators explicitly. Supports:
+  - **Text search**: Filters active lists by title substring.
+  - **Tag filter**: A "Tags" button opens a popover listing all tags used across any active list the user is a member of. Selected tags filter the list to only entries that have at least one matching tagged item; matched tags are shown as small indicators on each list row.
+- **Closed**: All lists with a `closedAt` value, sorted most-recently-closed first. Dimmed styling. Only shown when at least one closed list exists.
 
 ### TypeScript API Types (`src/api/types.ts`)
 
 ```typescript
-TodoList         // id, title, role, ownerName, memberCount, itemCount, createdAt, updatedAt, closedAt
+TodoList         // id, title, role, ownerName, contributorNames, memberCount,
+                 // notStartedCount, partialCount, completeCount, abandonedCount,
+                 // createdAt, updatedAt, closedAt, tags
 TodoItem         // id, listId, content, status, notes, dueDate, assignedTo, tags, createdAt, updatedAt
+Tag              // id, name, color
 Member           // profileId, displayName, avatarUrl, role, joinedAt
 AddableFriend    // profileId, displayName, email, avatarUrl
 FriendInfo       // profileId, displayName, email, avatarUrl
@@ -659,4 +691,5 @@ ReceivedRequestInfo  // requesterId, displayName, email, avatarUrl, createdAt
 SentRequestInfo      // addresseeId, displayName, email, avatarUrl, createdAt
 FriendsResult    // friends, pendingReceived, pendingSent
 SendRequestResult    // invitationSent: boolean
+ActivityLogEntry // id, actionType, actorName, detail, timestamp
 ```
