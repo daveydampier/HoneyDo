@@ -4,15 +4,24 @@ import { api } from '../api/client'
 import type { TodoItem, Tag, PagedResult, TodoList, Member, AddableFriend, ApiError } from '../api/types'
 import { useAuth } from '../context/AuthContext'
 import { getTagTextColor } from '../utils/tags'
+import {
+  Container, Group, Title, Text, Anchor, Button, Badge,
+  Paper, Stack, Alert, Loader, Textarea, TextInput,
+  UnstyledButton,
+} from '@mantine/core'
+import {
+  IconAlertCircle, IconSortAscending, IconSortDescending,
+  IconActivity, IconUsers,
+} from '@tabler/icons-react'
 
 const STATUS_LABELS: Record<number, string> = { 1: 'Not Started', 2: 'Partial', 3: 'Complete', 4: 'Abandoned' }
+const STATUS_COLORS: Record<number, string> = { 1: 'gray', 2: 'yellow', 3: 'green', 4: 'red' }
 const NOTES_MAX = 256
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-/** Returns true if a YYYY-MM-DD date string is strictly before today (local time). */
 function isDatePast(dateStr: string): boolean {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -20,10 +29,9 @@ function isDatePast(dateStr: string): boolean {
   return d < today
 }
 
-/** Returns true if a task's due date should show an overdue warning. */
 function isOverdue(dueDate: string | null | undefined, statusId: number): boolean {
   if (!dueDate) return false
-  if (statusId === 3 || statusId === 4) return false  // Complete or Abandoned — not overdue
+  if (statusId === 3 || statusId === 4) return false
   return isDatePast(dueDate)
 }
 
@@ -32,32 +40,25 @@ export default function ListDetailPage() {
   const { profileId } = useAuth()
   const navigate = useNavigate()
 
-  // List metadata
   const [list, setList] = useState<TodoList | null>(null)
-
-  // Items
   const [items, setItems] = useState<TodoItem[]>([])
   const [loadingItems, setLoadingItems] = useState(true)
   const [content, setContent] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [createError, setCreateError] = useState<string | null>(null)
 
-  // Sorting
   const [sortBy, setSortBy] = useState<'DueDate' | 'CreatedAt'>('DueDate')
   const [ascending, setAscending] = useState(true)
 
-  // Inline editing
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [editNotes, setEditNotes] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
 
-  // Tags
   const [myTags, setMyTags] = useState<Tag[]>([])
   const [editTagIds, setEditTagIds] = useState<Set<string>>(new Set())
   const [togglingTagId, setTogglingTagId] = useState<string | null>(null)
 
-  // Members
   const [members, setMembers] = useState<Member[]>([])
   const [addableFriends, setAddableFriends] = useState<AddableFriend[]>([])
   const [showMembers, setShowMembers] = useState(false)
@@ -70,9 +71,7 @@ export default function ListDetailPage() {
 
   useEffect(() => {
     if (!listId) return
-    api.get<TodoList>(`/lists/${listId}`)
-      .then(setList)
-      .catch(() => {})
+    api.get<TodoList>(`/lists/${listId}`).then(setList).catch(() => {})
   }, [listId])
 
   useEffect(() => {
@@ -103,9 +102,7 @@ export default function ListDetailPage() {
       ])
       setMembers(membersRes)
       setAddableFriends(friendsRes)
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }
 
   async function handleAddFriend(friendProfileId: string) {
@@ -151,11 +148,9 @@ export default function ListDetailPage() {
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
     setCreateError(null)
-
     if (dueDate && isDatePast(dueDate)) {
       if (!confirm('The due date you entered is in the past. Add this task anyway?')) return
     }
-
     try {
       const item = await api.post<TodoItem>(`/lists/${listId}/items`, {
         content,
@@ -215,11 +210,8 @@ export default function ListDetailPage() {
           ))
         }
       }
-    } catch {
-      // leave state unchanged on failure
-    } finally {
-      setTogglingTagId(null)
-    }
+    } catch { /* leave state unchanged */ }
+    finally { setTogglingTagId(null) }
   }
 
   async function handleEditSave(id: string) {
@@ -227,17 +219,13 @@ export default function ListDetailPage() {
     try {
       const updated = await api.patch<TodoItem>(`/lists/${listId}/items/${id}`, {
         content: editContent,
-        notes: editNotes,   // empty string clears notes
+        notes: editNotes,
       })
       setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
       setEditingId(null)
     } catch (err) {
       const apiErr = err as ApiError
-      setEditError(
-        apiErr.errors?.Content?.[0]
-          ?? apiErr.errors?.Notes?.[0]
-          ?? apiErr.title
-      )
+      setEditError(apiErr.errors?.Content?.[0] ?? apiErr.errors?.Notes?.[0] ?? apiErr.title)
     }
   }
 
@@ -251,209 +239,203 @@ export default function ListDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '40px auto', padding: '0 16px' }}>
-      <Link to="/" style={{ fontSize: 14, color: '#666' }}>← Back to lists</Link>
+    <Container size="md" pt="xl">
+      <Anchor component={Link} to="/" size="sm" c="dimmed">← Back to lists</Anchor>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '16px 0 16px' }}>
-        <h1 style={{ margin: 0 }}>
-          {list?.title ?? 'Tasks'}
-          {isClosed && (
-            <span style={{ marginLeft: 12, fontSize: 13, fontWeight: 400, background: '#e8f5e9', color: '#2e7d32', borderRadius: 4, padding: '2px 8px', verticalAlign: 'middle' }}>
-              Closed
-            </span>
-          )}
-        </h1>
-        <div style={{ display: 'flex', gap: 8 }}>
+      {/* Page header */}
+      <Group justify="space-between" mt="sm" mb="md" wrap="nowrap" align="flex-start">
+        <Group gap="sm" align="center">
+          <Title order={1}>{list?.title ?? 'Tasks'}</Title>
+          {isClosed && <Badge color="green" variant="light">Closed</Badge>}
+        </Group>
+        <Group gap="xs" wrap="nowrap">
           {isOwner && !isClosed && (
-            <button
-              onClick={handleClose}
+            <Button
+              size="xs"
+              color="green"
               disabled={!canClose}
               title={!canClose ? 'All tasks must be Partial, Complete, or Abandoned to close this list' : 'Close this list'}
-              style={{
-                fontSize: 13,
-                background: canClose ? '#2e7d32' : 'none',
-                color: canClose ? '#fff' : '#aaa',
-                border: `1px solid ${canClose ? '#2e7d32' : '#ddd'}`,
-                borderRadius: 6,
-                padding: '6px 12px',
-                cursor: canClose ? 'pointer' : 'not-allowed',
-              }}
+              onClick={handleClose}
             >
               Close List
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            size="xs"
+            variant="outline"
+            leftSection={<IconActivity size={13} />}
             onClick={() => navigate(`/lists/${listId}/activity`)}
-            style={{ fontSize: 13, background: 'none', border: '1px solid #ccc', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', color: '#555' }}
           >
             Activity
-          </button>
-          <button
+          </Button>
+          <Button
+            size="xs"
+            variant={showMembers ? 'filled' : 'outline'}
+            leftSection={<IconUsers size={13} />}
             onClick={() => setShowMembers(v => !v)}
-            style={{ fontSize: 13, background: 'none', border: '1px solid #ccc', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', color: '#555' }}
           >
             {showMembers ? 'Hide members' : `Members (${list?.memberCount ?? '…'})`}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Group>
+      </Group>
 
+      {/* Closed banner */}
       {isClosed && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', background: '#e8f5e9', borderRadius: 6, fontSize: 13, color: '#2e7d32' }}>
+        <Alert color="green" variant="light" mb="md">
           ✅ This list was closed on {formatDate(list!.closedAt!)} and is now read-only.
-        </div>
+        </Alert>
       )}
 
       {/* Members panel */}
       {showMembers && (
-        <div style={{ background: '#f8f8f8', border: '1px solid #e0e0e0', borderRadius: 10, padding: '16px 20px', marginBottom: 28 }}>
-          <h2 style={{ fontSize: 15, margin: '0 0 12px' }}>Members</h2>
+        <Paper p="md" radius="md" withBorder mb="xl">
+          <Title order={4} mb="sm">Members</Title>
 
-          {memberError && <p style={{ color: 'red', fontSize: 13, marginBottom: 8 }}>{memberError}</p>}
+          {memberError && (
+            <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />} mb="sm">
+              {memberError}
+            </Alert>
+          )}
 
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6, margin: '0 0 16px' }}>
+          <Stack gap="xs" mb="md">
             {members.map(m => (
-              <li key={m.profileId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 600 }}>{m.displayName}</span>
-                  <span style={{
-                    marginLeft: 8,
-                    fontSize: 11,
-                    background: m.role === 'Owner' ? '#0a84ff' : '#888',
-                    color: '#fff',
-                    borderRadius: 4,
-                    padding: '1px 6px'
-                  }}>
-                    {m.role}
-                  </span>
-                </div>
+              <Group key={m.profileId} gap="sm">
+                <Text size="sm" fw={600} flex={1}>{m.displayName}</Text>
+                <Badge
+                  size="xs"
+                  color={m.role === 'Owner' ? 'blue' : 'gray'}
+                  variant="filled"
+                >
+                  {m.role}
+                </Badge>
                 {isOwner && m.role !== 'Owner' && m.profileId !== profileId && (
-                  <button
+                  <Button
+                    variant="subtle"
+                    color="red"
+                    size="xs"
                     onClick={() => handleRemoveMember(m.profileId, m.displayName)}
-                    style={{ fontSize: 12, background: 'none', border: 'none', color: '#c00', cursor: 'pointer' }}
                   >
                     Remove
-                  </button>
+                  </Button>
                 )}
-              </li>
+              </Group>
             ))}
-          </ul>
+          </Stack>
 
           {isOwner && (
             <>
-              <h3 style={{ fontSize: 14, margin: '0 0 8px', color: '#444' }}>Add a Friend as Collaborator</h3>
+              <Text size="sm" fw={500} c="dimmed" mb="xs">Add a Friend as Collaborator</Text>
               {addableFriends.length === 0 ? (
-                <p style={{ fontSize: 13, color: '#888', margin: 0 }}>
+                <Text size="sm" c="dimmed">
                   All your friends are already on this list, or you have no friends to add yet.
-                </p>
+                </Text>
               ) : (
-                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6, margin: 0 }}>
+                <Stack gap="xs">
                   {addableFriends.map(f => (
-                    <li key={f.profileId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontWeight: 500 }}>{f.displayName}</span>
-                        <span style={{ fontSize: 13, color: '#666', marginLeft: 8 }}>{f.email}</span>
-                      </div>
-                      <button
+                    <Group key={f.profileId} gap="sm">
+                      <Text size="sm" fw={500} flex={1}>{f.displayName}</Text>
+                      <Text size="xs" c="dimmed">{f.email}</Text>
+                      <Button
+                        size="xs"
+                        loading={addingFriend === f.profileId}
                         onClick={() => handleAddFriend(f.profileId)}
-                        disabled={addingFriend === f.profileId}
-                        style={{
-                          fontSize: 12,
-                          background: '#0a84ff',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 4,
-                          padding: '4px 10px',
-                          cursor: 'pointer',
-                          opacity: addingFriend === f.profileId ? 0.6 : 1
-                        }}
                       >
-                        {addingFriend === f.profileId ? 'Adding…' : 'Add'}
-                      </button>
-                    </li>
+                        Add
+                      </Button>
+                    </Group>
                   ))}
-                </ul>
+                </Stack>
               )}
             </>
           )}
-        </div>
+        </Paper>
       )}
 
       {/* Sort toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: '#666' }}>Sort by</span>
-        {(['DueDate', 'CreatedAt'] as const).map(opt => (
-          <button
-            key={opt}
-            onClick={() => setSortBy(opt)}
-            style={{
-              fontSize: 13,
-              padding: '3px 10px',
-              borderRadius: 4,
-              border: '1px solid #ccc',
-              background: sortBy === opt ? '#0a84ff' : 'none',
-              color: sortBy === opt ? '#fff' : '#555',
-              cursor: 'pointer',
-            }}
+      <Group gap="xs" mb="sm">
+        <Text size="sm" c="dimmed">Sort by</Text>
+        <Button.Group>
+          <Button
+            size="xs"
+            variant={sortBy === 'DueDate' ? 'filled' : 'default'}
+            onClick={() => setSortBy('DueDate')}
           >
-            {opt === 'DueDate' ? 'Due Date' : 'Created Date'}
-          </button>
-        ))}
-        <button
+            Due Date
+          </Button>
+          <Button
+            size="xs"
+            variant={sortBy === 'CreatedAt' ? 'filled' : 'default'}
+            onClick={() => setSortBy('CreatedAt')}
+          >
+            Created Date
+          </Button>
+        </Button.Group>
+        <Button
+          size="xs"
+          variant="default"
+          ml="auto"
+          leftSection={ascending ? <IconSortAscending size={13} /> : <IconSortDescending size={13} />}
           onClick={() => setAscending(v => !v)}
-          title={ascending ? 'Ascending — click to switch to descending' : 'Descending — click to switch to ascending'}
-          style={{
-            fontSize: 13,
-            padding: '3px 10px',
-            borderRadius: 4,
-            border: '1px solid #ccc',
-            background: 'none',
-            color: '#555',
-            cursor: 'pointer',
-            marginLeft: 'auto',
-          }}
         >
-          {ascending ? '↑ Asc' : '↓ Desc'}
-        </button>
-      </div>
+          {ascending ? 'Asc' : 'Desc'}
+        </Button>
+      </Group>
 
-      {/* New item form — hidden when list is closed */}
+      {/* New item form */}
       {!isClosed && (
-        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input style={{ flex: 1 }} placeholder="New task…" value={content} onChange={e => setContent(e.target.value)} required />
-            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-            <button type="submit">Add</button>
-          </div>
-          {createError && <p style={{ color: 'red', fontSize: 14 }}>{createError}</p>}
+        <form onSubmit={handleCreate}>
+          <Stack gap="xs" mb="md">
+            <Group gap="sm">
+              <TextInput
+                flex={1}
+                placeholder="New task…"
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                required
+              />
+              <input
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                style={{ fontSize: 13, padding: '6px 8px', borderRadius: 6, border: '1px solid #ced4da' }}
+              />
+              <Button type="submit">Add</Button>
+            </Group>
+            {createError && (
+              <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
+                {createError}
+              </Alert>
+            )}
+          </Stack>
         </form>
       )}
 
-      {loadingItems ? <p>Loading…</p> : (
-        <>
-          {/* Column headers */}
-          {items.length > 0 && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '0 16px',
-              marginBottom: 4,
-            }}>
-              <span style={{ width: 100, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
-              <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Task</span>
-              <span style={{ width: 90, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Created</span>
-              <span style={{ width: 90, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Due Date</span>
-              <span style={{ width: 90, flexShrink: 0 }} />
-            </div>
+      {/* Items list */}
+      {loadingItems ? (
+        <Group justify="center" mt="xl"><Loader size="sm" /></Group>
+      ) : (
+        <Stack gap="sm">
+          {items.length === 0 && (
+            <Text size="sm" c="dimmed">No tasks yet. Add one above.</Text>
           )}
 
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Column headers */}
+          {items.length > 0 && (
+            <Group gap={12} px="sm">
+              <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ width: 110, flexShrink: 0, letterSpacing: '0.05em' }}>Status</Text>
+              <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ flex: 1, letterSpacing: '0.05em' }}>Task</Text>
+              <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ width: 90, flexShrink: 0, letterSpacing: '0.05em' }}>Created</Text>
+              <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ width: 90, flexShrink: 0, letterSpacing: '0.05em' }}>Due Date</Text>
+              <div style={{ width: 90, flexShrink: 0 }} />
+            </Group>
+          )}
+
           {items.map(item => (
-            <li key={item.id} style={{ background: '#fff', borderRadius: 8, padding: '12px 16px' }}>
+            <Paper key={item.id} p="sm" radius="md" withBorder>
               {editingId === item.id ? (
                 /* ── Edit mode ── */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <input
+                <Stack gap="sm">
+                  <TextInput
                     value={editContent}
                     onChange={e => setEditContent(e.target.value)}
                     autoFocus
@@ -461,46 +443,33 @@ export default function ListDetailPage() {
                   />
 
                   <div style={{ position: 'relative' }}>
-                    <textarea
+                    <Textarea
                       value={editNotes}
                       onChange={e => setEditNotes(e.target.value)}
                       placeholder="Add a note… (optional)"
                       maxLength={NOTES_MAX}
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        resize: 'vertical',
-                        fontSize: 13,
-                        padding: '6px 8px',
-                        borderRadius: 4,
-                        border: '1px solid #ccc',
-                        boxSizing: 'border-box',
-                        fontFamily: 'inherit',
-                      }}
+                      minRows={3}
+                      autosize
                     />
-                    <span style={{
-                      position: 'absolute',
-                      bottom: 6,
-                      right: 8,
-                      fontSize: 11,
-                      color: editNotes.length > NOTES_MAX - 20 ? '#c00' : '#aaa',
-                      pointerEvents: 'none',
-                    }}>
+                    <Text
+                      size="xs"
+                      c={editNotes.length > NOTES_MAX - 20 ? 'red' : 'dimmed'}
+                      style={{ position: 'absolute', bottom: 6, right: 8, pointerEvents: 'none' }}
+                    >
                       {editNotes.length}/{NOTES_MAX}
-                    </span>
+                    </Text>
                   </div>
 
                   {/* Tag picker */}
                   {myTags.length > 0 && (
-                    <div>
-                      <p style={{ fontSize: 12, color: '#888', margin: '0 0 6px' }}>Tags</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <Stack gap={4}>
+                      <Text size="xs" c="dimmed">Tags</Text>
+                      <Group gap="xs">
                         {myTags.map(tag => {
                           const applied = editTagIds.has(tag.id)
                           return (
-                            <button
+                            <UnstyledButton
                               key={tag.id}
-                              type="button"
                               onClick={() => handleTagToggle(tag.id)}
                               disabled={togglingTagId === tag.id}
                               style={{
@@ -511,146 +480,126 @@ export default function ListDetailPage() {
                                 padding: '3px 10px',
                                 fontSize: 12,
                                 fontWeight: 500,
-                                cursor: togglingTagId === tag.id ? 'not-allowed' : 'pointer',
                                 opacity: togglingTagId === tag.id ? 0.6 : 1,
+                                cursor: togglingTagId === tag.id ? 'not-allowed' : 'pointer',
                               }}
                             >
                               {tag.name}
-                            </button>
+                            </UnstyledButton>
                           )
                         })}
-                      </div>
-                    </div>
+                      </Group>
+                    </Stack>
                   )}
 
-                  {editError && <p style={{ color: 'red', fontSize: 13, margin: 0 }}>{editError}</p>}
+                  {editError && (
+                    <Alert color="red" variant="light" icon={<IconAlertCircle size={14} />} py="xs">
+                      {editError}
+                    </Alert>
+                  )}
 
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => handleEditSave(item.id)}>Save</button>
-                    <button onClick={cancelEdit} style={{ background: 'none', border: '1px solid #ccc' }}>Cancel</button>
-                  </div>
-                </div>
+                  <Group gap="xs">
+                    <Button size="xs" onClick={() => handleEditSave(item.id)}>Save</Button>
+                    <Button size="xs" variant="default" onClick={cancelEdit}>Cancel</Button>
+                  </Group>
+                </Stack>
               ) : (
                 /* ── View mode ── */
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Stack gap="xs">
+                  <Group gap={12} wrap="nowrap">
+                    {/* Status */}
                     {isClosed ? (
-                      <span style={{ width: 100, flexShrink: 0, fontSize: 12, color: '#888', textAlign: 'center', border: '1px solid #eee', borderRadius: 4, padding: '2px 8px' }}>
-                        {STATUS_LABELS[item.status.id]}
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleStatusCycle(item)}
-                        title="Cycle status"
-                        style={{ width: 100, flexShrink: 0, background: 'none', border: '1px solid #ccc', borderRadius: 4, padding: '2px 8px', fontSize: 12, textAlign: 'center' }}
+                      <Badge
+                        color={STATUS_COLORS[item.status.id]}
+                        variant="light"
+                        style={{ width: 110, flexShrink: 0 }}
                       >
                         {STATUS_LABELS[item.status.id]}
-                      </button>
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        color={STATUS_COLORS[item.status.id]}
+                        style={{ width: 110, flexShrink: 0 }}
+                        onClick={() => handleStatusCycle(item)}
+                        title="Click to cycle status"
+                      >
+                        {STATUS_LABELS[item.status.id]}
+                      </Button>
                     )}
-                    <span style={{
-                      flex: 1,
-                      textDecoration: item.status.id === 3 ? 'line-through' : 'none',
-                      color: item.status.id === 4 ? '#aaa' : 'inherit',
-                    }}>
+
+                    {/* Content */}
+                    <Text
+                      size="sm"
+                      flex={1}
+                      td={item.status.id === 3 ? 'line-through' : undefined}
+                      c={item.status.id === 4 ? 'dimmed' : undefined}
+                    >
                       {item.content}
-                    </span>
-                    <span style={{ width: 90, flexShrink: 0, fontSize: 12, color: '#888' }}>
+                    </Text>
+
+                    {/* Created */}
+                    <Text size="xs" c="dimmed" style={{ width: 90, flexShrink: 0 }}>
                       {formatDate(item.createdAt)}
-                    </span>
-                    <span style={{
-                      width: 90,
-                      flexShrink: 0,
-                      fontSize: 12,
-                      color: isOverdue(item.dueDate, item.status.id) ? '#c00' : '#888',
-                      fontWeight: isOverdue(item.dueDate, item.status.id) ? 600 : 400,
-                    }}>
+                    </Text>
+
+                    {/* Due date */}
+                    <Text
+                      size="xs"
+                      fw={isOverdue(item.dueDate, item.status.id) ? 600 : 400}
+                      c={isOverdue(item.dueDate, item.status.id) ? 'red' : 'dimmed'}
+                      style={{ width: 90, flexShrink: 0 }}
+                    >
                       {item.dueDate
-                        ? <>
-                            {item.dueDate}
-                            {isOverdue(item.dueDate, item.status.id) && (
-                              <span title="Overdue" style={{ marginLeft: 4 }}>⚠️</span>
-                            )}
-                          </>
-                        : <span style={{ color: '#ccc' }}>—</span>
+                        ? <>{item.dueDate}{isOverdue(item.dueDate, item.status.id) && ' ⚠️'}</>
+                        : <Text span c="dimmed" style={{ opacity: 0.4 }}>—</Text>
                       }
-                    </span>
-                    <div style={{ width: 90, flexShrink: 0, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    </Text>
+
+                    {/* Actions */}
+                    <Group gap="xs" style={{ width: 90, flexShrink: 0 }} justify="flex-end">
                       {!isClosed && (
                         <>
-                          <button
-                            onClick={() => startEdit(item)}
-                            style={{ background: 'none', border: 'none', fontSize: 13, color: '#555', cursor: 'pointer' }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            style={{ background: 'none', border: 'none', fontSize: 13, color: '#c00', cursor: 'pointer' }}
-                          >
-                            Delete
-                          </button>
+                          <Button variant="subtle" size="xs" onClick={() => startEdit(item)}>Edit</Button>
+                          <Button variant="subtle" color="red" size="xs" onClick={() => handleDelete(item.id)}>Delete</Button>
                         </>
                       )}
-                    </div>
-                  </div>
+                    </Group>
+                  </Group>
 
                   {/* Tag pills */}
                   {item.tags.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6, paddingLeft: 112 }}>
+                    <Group gap={4} pl={122}>
                       {item.tags.map(tag => (
-                        <span key={tag.id} style={{
-                          background: tag.color,
-                          color: getTagTextColor(tag.color),
-                          borderRadius: 10,
-                          padding: '1px 8px',
-                          fontSize: 11,
-                          fontWeight: 500,
-                        }}>
+                        <Badge
+                          key={tag.id}
+                          size="xs"
+                          style={{ background: tag.color, color: getTagTextColor(tag.color) }}
+                          variant="filled"
+                        >
                           {tag.name}
-                        </span>
+                        </Badge>
                       ))}
-                    </div>
+                    </Group>
                   )}
 
-                  {/* Notes display */}
+                  {/* Notes */}
                   {item.notes ? (
-                    <p style={{
-                      margin: '6px 0 0 0',
-                      fontSize: 13,
-                      color: '#666',
-                      fontStyle: 'italic',
-                      paddingLeft: 2,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}>
+                    <Text size="sm" c="dimmed" fs="italic" pl={2} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                       {item.notes}
-                    </p>
+                    </Text>
                   ) : !isClosed ? (
-                    <button
-                      onClick={() => startEdit(item)}
-                      style={{
-                        display: 'block',
-                        marginTop: 4,
-                        paddingLeft: 2,
-                        background: 'none',
-                        border: 'none',
-                        fontSize: 12,
-                        color: '#bbb',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      + Add note
-                    </button>
+                    <UnstyledButton onClick={() => startEdit(item)} style={{ paddingLeft: 2 }}>
+                      <Text size="xs" c="dimmed" style={{ opacity: 0.5 }}>+ Add note</Text>
+                    </UnstyledButton>
                   ) : null}
-                </div>
+                </Stack>
               )}
-            </li>
+            </Paper>
           ))}
-          {items.length === 0 && <p style={{ color: '#666' }}>No tasks yet. Add one above.</p>}
-        </ul>
-        </>
+        </Stack>
       )}
-    </div>
+    </Container>
   )
 }
