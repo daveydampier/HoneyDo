@@ -7,11 +7,12 @@ import { getTagTextColor } from '../utils/tags'
 import {
   Container, Group, Title, Text, Anchor, Button, Badge,
   Paper, Stack, Alert, Loader, Textarea, TextInput,
-  UnstyledButton,
+  UnstyledButton, ActionIcon, Popover,
 } from '@mantine/core'
 import {
   IconAlertCircle, IconSortAscending, IconSortDescending,
-  IconActivity, IconUsers,
+  IconActivity, IconUsers, IconStar, IconStarFilled,
+  IconTag, IconChevronDown,
 } from '@tabler/icons-react'
 
 const STATUS_LABELS: Record<number, string> = { 1: 'Not Started', 2: 'Partial', 3: 'Complete', 4: 'Abandoned' }
@@ -45,7 +46,11 @@ export default function ListDetailPage() {
   const [loadingItems, setLoadingItems] = useState(true)
   const [content, setContent] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [createTagIds, setCreateTagIds] = useState<Set<string>>(new Set())
+  const [createTagPopoverOpen, setCreateTagPopoverOpen] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+
+  const [starringId, setStarringId] = useState<string | null>(null)
 
   const [sortBy, setSortBy] = useState<'DueDate' | 'CreatedAt'>('DueDate')
   const [ascending, setAscending] = useState(true)
@@ -161,9 +166,20 @@ export default function ListDetailPage() {
         content,
         dueDate: dueDate || null,
       })
+      // Apply any pre-selected tags in parallel
+      if (createTagIds.size > 0) {
+        await Promise.all(
+          [...createTagIds].map(tagId =>
+            api.post(`/lists/${listId}/items/${item.id}/tags/${tagId}`, {})
+          )
+        )
+        // Attach tag objects to the new item for immediate display
+        item.tags = myTags.filter(t => createTagIds.has(t.id))
+      }
       setItems(prev => [item, ...prev])
       setContent('')
       setDueDate('')
+      setCreateTagIds(new Set())
     } catch (err) {
       const apiErr = err as ApiError
       setCreateError(apiErr.errors?.Content?.[0] ?? apiErr.title)
@@ -178,6 +194,20 @@ export default function ListDetailPage() {
       setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
     } catch {
       setActionError('Failed to update status. Please try again.')
+    }
+  }
+
+  async function handleStar(item: TodoItem) {
+    setStarringId(item.id)
+    try {
+      const updated = await api.patch<TodoItem>(`/lists/${listId}/items/${item.id}`, {
+        isStarred: !item.isStarred,
+      })
+      setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
+    } catch {
+      setActionError('Failed to update star. Please try again.')
+    } finally {
+      setStarringId(null)
     }
   }
 
@@ -391,15 +421,15 @@ export default function ListDetailPage() {
             Created Date
           </Button>
         </Button.Group>
-        <Button
-          size="xs"
+        <ActionIcon
+          size="sm"
           variant="default"
           ml="auto"
-          leftSection={ascending ? <IconSortAscending size={13} /> : <IconSortDescending size={13} />}
+          aria-label={ascending ? 'Sort ascending' : 'Sort descending'}
           onClick={() => setAscending(v => !v)}
         >
-          {ascending ? 'Asc' : 'Desc'}
-        </Button>
+          {ascending ? <IconSortAscending size={14} /> : <IconSortDescending size={14} />}
+        </ActionIcon>
       </Group>
 
       {/* New item form */}
@@ -428,6 +458,67 @@ export default function ListDetailPage() {
                   colorScheme: 'inherit',
                 }}
               />
+
+              {/* Tag picker — only shown when the user has tags */}
+              {myTags.length > 0 && (
+                <Popover
+                  opened={createTagPopoverOpen}
+                  onChange={setCreateTagPopoverOpen}
+                  position="bottom-end"
+                  shadow="md"
+                  width={200}
+                >
+                  <Popover.Target>
+                    <Button
+                      size="xs"
+                      variant={createTagIds.size > 0 ? 'filled' : 'default'}
+                      leftSection={<IconTag size={13} />}
+                      rightSection={
+                        createTagIds.size > 0
+                          ? <Badge size="xs" circle variant="white" color="blue">{createTagIds.size}</Badge>
+                          : <IconChevronDown size={11} />
+                      }
+                      onClick={() => setCreateTagPopoverOpen(o => !o)}
+                    >
+                      Tags
+                    </Button>
+                  </Popover.Target>
+                  <Popover.Dropdown>
+                    <Stack gap="xs">
+                      <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>
+                        Add tags
+                      </Text>
+                      {myTags.map(tag => {
+                        const active = createTagIds.has(tag.id)
+                        return (
+                          <Badge
+                            key={tag.id}
+                            size="md"
+                            variant={active ? 'filled' : 'outline'}
+                            fullWidth
+                            style={{
+                              cursor: 'pointer',
+                              justifyContent: 'flex-start',
+                              background: active ? tag.color : 'transparent',
+                              color: active ? getTagTextColor(tag.color) : tag.color,
+                              borderColor: tag.color,
+                            }}
+                            leftSection={<IconTag size={11} />}
+                            onClick={() => setCreateTagIds(prev => {
+                              const next = new Set(prev)
+                              next.has(tag.id) ? next.delete(tag.id) : next.add(tag.id)
+                              return next
+                            })}
+                          >
+                            {tag.name}
+                          </Badge>
+                        )
+                      })}
+                    </Stack>
+                  </Popover.Dropdown>
+                </Popover>
+              )}
+
               <Button type="submit">Add</Button>
             </Group>
             {createError && (
@@ -587,7 +678,20 @@ export default function ListDetailPage() {
                     </Text>
 
                     {/* Actions */}
-                    <Group gap="xs" style={{ width: 90, flexShrink: 0 }} justify="flex-end">
+                    <Group gap={4} style={{ width: 90, flexShrink: 0 }} justify="flex-end" wrap="nowrap">
+                      {/* Star — always visible, even on closed lists */}
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        color={item.isStarred ? 'yellow' : 'gray'}
+                        loading={starringId === item.id}
+                        aria-label={item.isStarred ? 'Unstar task' : 'Star task'}
+                        onClick={() => handleStar(item)}
+                      >
+                        {item.isStarred
+                          ? <IconStarFilled size={14} />
+                          : <IconStar size={14} />}
+                      </ActionIcon>
                       {!isClosed && (
                         <>
                           <Button variant="subtle" size="xs" onClick={() => startEdit(item)}>Edit</Button>

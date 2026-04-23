@@ -12,6 +12,7 @@ public record TodoItemResponse(
     string? DueDate,
     AssigneeDto? AssignedTo,
     IEnumerable<TagDto> Tags,
+    bool IsStarred,
     DateTime CreatedAt,
     DateTime UpdatedAt)
 {
@@ -25,6 +26,7 @@ public record TodoItemResponse(
             i.DueDate,
             i.AssignedTo == null ? null : new AssigneeDto(i.AssignedTo.Id, i.AssignedTo.DisplayName),
             i.ItemTags.Select(t => new TagDto(t.Tag.Id, t.Tag.Name, t.Tag.Color)),
+            i.IsStarred,
             i.CreatedAt,
             i.UpdatedAt);
 }

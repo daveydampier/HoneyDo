@@ -16,7 +16,8 @@ public record UpdateItemCommand(
     string? DueDate,
     Guid? AssignedToId,
     bool ClearDueDate = false,
-    bool ClearAssignee = false) : IRequest<TodoItemResponse>;
+    bool ClearAssignee = false,
+    bool? IsStarred = null) : IRequest<TodoItemResponse>;
 
 public class UpdateItemCommandValidator : AbstractValidator<UpdateItemCommand>
 {
@@ -62,6 +63,7 @@ public class UpdateItemCommandHandler(AppDbContext db) : IRequestHandler<UpdateI
         if (request.ClearDueDate) item.DueDate = null;
         if (request.AssignedToId.HasValue) item.AssignedToId = request.AssignedToId;
         if (request.ClearAssignee) item.AssignedToId = null;
+        if (request.IsStarred is not null) item.IsStarred = request.IsStarred.Value;
         item.UpdatedAt = DateTime.UtcNow;
 
         if (previousStatus != item.StatusId)

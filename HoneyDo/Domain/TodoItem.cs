@@ -9,6 +9,7 @@ public class TodoItem
     public int StatusId { get; set; }
     public string? Notes { get; set; }
     public string? DueDate { get; set; }
+    public bool IsStarred { get; set; } = false;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }

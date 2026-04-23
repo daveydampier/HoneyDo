@@ -46,7 +46,7 @@ public class ItemsController(IMediator mediator) : ControllerBase
     {
         var command = new UpdateItemCommand(listId, itemId, User.GetProfileId(),
             request.Content, request.StatusId, request.Notes, request.DueDate,
-            request.AssignedToId, request.ClearDueDate, request.ClearAssignee);
+            request.AssignedToId, request.ClearDueDate, request.ClearAssignee, request.IsStarred);
         return Ok(await mediator.Send(command, ct));
     }
 
@@ -59,4 +59,4 @@ public class ItemsController(IMediator mediator) : ControllerBase
 }
 
 public record CreateItemRequest(string Content, string? Notes, string? DueDate, Guid? AssignedToId);
-public record UpdateItemRequest(string? Content, int? StatusId, string? Notes, string? DueDate, Guid? AssignedToId, bool ClearDueDate = false, bool ClearAssignee = false);
+public record UpdateItemRequest(string? Content, int? StatusId, string? Notes, string? DueDate, Guid? AssignedToId, bool ClearDueDate = false, bool ClearAssignee = false, bool? IsStarred = null);

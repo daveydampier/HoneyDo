@@ -47,15 +47,23 @@ public class GetItemsQueryHandler(AppDbContext db) : IRequestHandler<GetItemsQue
         if (request.StatusIds is { Length: > 0 })
             query = query.Where(i => request.StatusIds.Contains(i.StatusId));
 
+        // Priority groups applied before the user-selected sort:
+        //   1. Active tasks (statusId 1 or 2) before resolved (Complete=3 / Abandoned=4)
+        //   2. Starred tasks before unstarred (within each group)
+        //   3. User-selected sort (DueDate / Content / CreatedAt, asc/desc)
+        var prioritised = query
+            .OrderBy(i => i.StatusId == 3 || i.StatusId == 4 ? 1 : 0)
+            .ThenBy(i => i.IsStarred ? 0 : 1);
+
         query = (request.SortBy, request.Ascending) switch
         {
             // Nulls last for ascending due-date so undated tasks float to the bottom.
-            (ItemSortBy.DueDate, true) => query.OrderBy(i => i.DueDate == null).ThenBy(i => i.DueDate),
-            (ItemSortBy.DueDate, false) => query.OrderBy(i => i.DueDate == null).ThenByDescending(i => i.DueDate),
-            (ItemSortBy.Content, true) => query.OrderBy(i => i.Content),
-            (ItemSortBy.Content, false) => query.OrderByDescending(i => i.Content),
-            (_, true) => query.OrderBy(i => i.CreatedAt),
-            (_, false) => query.OrderByDescending(i => i.CreatedAt)
+            (ItemSortBy.DueDate, true)  => prioritised.ThenBy(i => i.DueDate == null).ThenBy(i => i.DueDate),
+            (ItemSortBy.DueDate, false) => prioritised.ThenBy(i => i.DueDate == null).ThenByDescending(i => i.DueDate),
+            (ItemSortBy.Content, true)  => prioritised.ThenBy(i => i.Content),
+            (ItemSortBy.Content, false) => prioritised.ThenByDescending(i => i.Content),
+            (_, true)                   => prioritised.ThenBy(i => i.CreatedAt),
+            (_,false)                   => prioritised.ThenByDescending(i => i.CreatedAt)
         };
 
         var total = await query.CountAsync(ct);
