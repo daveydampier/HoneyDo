@@ -22,7 +22,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
         // Global soft-delete filters
-        modelBuilder.Entity<Profile>().HasQueryFilter(p => p.DeletedAt == null);
         modelBuilder.Entity<TodoList>().HasQueryFilter(l => l.DeletedAt == null);
         modelBuilder.Entity<TodoItem>().HasQueryFilter(i => i.DeletedAt == null);
 
