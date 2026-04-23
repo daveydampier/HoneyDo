@@ -302,6 +302,8 @@ JWT tokens are issued on register and login. All endpoints except `/api/auth/reg
 - `Jwt:ExpiryHours` — Token lifetime (default: 24 hours)
 - `ClockSkew: TimeSpan.Zero` — No leeway on token expiry; tokens expire exactly when they say
 
+**Production key setup:** `appsettings.json` ships with a clearly-labelled placeholder value (`DEV_ONLY_REPLACE_VIA_ENV_OR_USER_SECRETS_IN_PRODUCTION`). Before deploying, override `Jwt:Key` via an environment variable (`Jwt__Key=<secret>`) or .NET User Secrets — never commit a real secret to source control.
+
 ### 7.2 Password Hashing
 
 BCrypt is used for password hashing. Passwords are never stored or logged in plaintext.
@@ -653,7 +655,7 @@ dotnet run --project HoneyDo/HoneyDo.csproj
 | `ListsPage` | `/` | Shows active lists and closed lists in separate sections. Create new lists. |
 | `ListDetailPage` | `/lists/:listId` | Task list with sorting, notes, and member management. Close list button for owners. |
 | `FriendsPage` | `/friends` | Send/accept/decline friend requests. View current friends. |
-| `ProfilePage` | `/profile` | View and update display name, phone number, avatar URL, and password. |
+| `ProfilePage` | `/profile` | View and update display name, phone number, avatar URL, and password. Manage personal tags. Choose color scheme (System / Light / Dark). |
 | `LoginPage` | `/login` | Email/password authentication. |
 | `RegisterPage` | `/register` | Account creation. Handles invite links (`?invite=token&email=...`). |
 | `ActivityPage` | `/lists/:listId/activity` | Chronological activity log for a list (newest first). Shows actor, action, and detail. |
@@ -675,6 +677,17 @@ dotnet run --project HoneyDo/HoneyDo.csproj
   - **Text search**: Filters active lists by title substring.
   - **Tag filter**: A "Tags" button opens a popover listing all tags used across any active list the user is a member of. Selected tags filter the list to only entries that have at least one matching tagged item; matched tags are shown as small indicators on each list row.
 - **Closed**: All lists with a `closedAt` value, sorted most-recently-closed first. Dimmed styling. Only shown when at least one closed list exists.
+
+### Color Scheme
+
+The app detects and respects the browser/OS dark mode preference on first load. Users can override the default via:
+- The sun/moon toggle icon in the persistent header (quick switch between light and dark)
+- The **Appearance** card on the Profile page, which offers three options:
+  - **System** — follows the OS preference automatically (`prefers-color-scheme` media query)
+  - **Light** — always light
+  - **Dark** — always dark
+
+The preference is persisted in `localStorage` under the key `honeydo-color-scheme` via Mantine's `localStorageColorSchemeManager`.
 
 ### TypeScript API Types (`src/api/types.ts`)
 

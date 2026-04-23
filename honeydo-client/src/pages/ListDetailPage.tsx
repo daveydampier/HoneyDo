@@ -65,6 +65,9 @@ export default function ListDetailPage() {
   const [addingFriend, setAddingFriend] = useState<string | null>(null)
   const [memberError, setMemberError] = useState<string | null>(null)
 
+  // General action error (status cycle, delete, close) — shown above the items list
+  const [actionError, setActionError] = useState<string | null>(null)
+
   const isOwner = list?.role === 'Owner'
   const isClosed = !!list?.closedAt
   const canClose = isOwner && !isClosed && items.length > 0 && items.every(i => i.status.id !== 1)
@@ -124,24 +127,26 @@ export default function ListDetailPage() {
   async function handleRemoveMember(memberProfileId: string, displayName: string) {
     if (!listId) return
     if (!confirm(`Remove ${displayName} from this list?`)) return
+    setMemberError(null)
     try {
       await api.delete(`/lists/${listId}/members/${memberProfileId}`)
       setMembers(prev => prev.filter(m => m.profileId !== memberProfileId))
       const friendsRes = await api.get<AddableFriend[]>(`/lists/${listId}/addable-friends`)
       setAddableFriends(friendsRes)
     } catch {
-      alert('Failed to remove member. Please try again.')
+      setMemberError('Failed to remove member. Please try again.')
     }
   }
 
   async function handleClose() {
     if (!listId) return
     if (!confirm('Close this list? It will become read-only.')) return
+    setActionError(null)
     try {
       const updated = await api.post<TodoList>(`/lists/${listId}/close`, {})
       setList(updated)
     } catch {
-      alert('Failed to close the list. Make sure all tasks are marked Partial, Complete, or Abandoned.')
+      setActionError('Failed to close the list. Make sure all tasks are marked Partial, Complete, or Abandoned.')
     }
   }
 
@@ -167,11 +172,12 @@ export default function ListDetailPage() {
 
   async function handleStatusCycle(item: TodoItem) {
     const next = item.status.id === 4 ? 1 : item.status.id + 1
+    setActionError(null)
     try {
       const updated = await api.patch<TodoItem>(`/lists/${listId}/items/${item.id}`, { statusId: next })
       setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
     } catch {
-      alert('Failed to update status. Please try again.')
+      setActionError('Failed to update status. Please try again.')
     }
   }
 
@@ -230,11 +236,12 @@ export default function ListDetailPage() {
   }
 
   async function handleDelete(id: string) {
+    setActionError(null)
     try {
       await api.delete(`/lists/${listId}/items/${id}`)
       setItems(prev => prev.filter(i => i.id !== id))
     } catch {
-      alert('Failed to delete item. Please try again.')
+      setActionError('Failed to delete item. Please try again.')
     }
   }
 
@@ -349,6 +356,20 @@ export default function ListDetailPage() {
             </>
           )}
         </Paper>
+      )}
+
+      {/* Action error (status cycle / delete / close) */}
+      {actionError && (
+        <Alert
+          color="red"
+          variant="light"
+          icon={<IconAlertCircle size={14} />}
+          withCloseButton
+          onClose={() => setActionError(null)}
+          mb="sm"
+        >
+          {actionError}
+        </Alert>
       )}
 
       {/* Sort toolbar */}

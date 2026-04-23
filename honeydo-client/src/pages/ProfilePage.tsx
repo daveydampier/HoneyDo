@@ -6,14 +6,16 @@ import { TAG_COLORS, getTagTextColor } from '../utils/tags'
 import {
   Container, Title, Text, TextInput, PasswordInput, Button,
   Paper, Stack, Group, Alert, Anchor, Avatar, ColorSwatch,
-  Badge, ActionIcon,
+  Badge, ActionIcon, SegmentedControl, useMantineColorScheme,
 } from '@mantine/core'
-import { IconAlertCircle, IconCircleCheck, IconX } from '@tabler/icons-react'
+import { IconAlertCircle, IconCircleCheck, IconX, IconDeviceDesktop, IconSun, IconMoon } from '@tabler/icons-react'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
 
 export default function ProfilePage() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme()
+
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -371,6 +373,23 @@ export default function ProfilePage() {
             </Button>
           </Stack>
         </form>
+      </Paper>
+
+      {/* Appearance */}
+      <Paper p="xl" radius="md" withBorder mb="lg">
+        <Title order={3} mb={4}>Appearance</Title>
+        <Text size="xs" c="dimmed" mb="md">
+          Choose how HoneyDo looks. <Text span fw={500}>System</Text> follows your device settings automatically.
+        </Text>
+        <SegmentedControl
+          value={colorScheme}
+          onChange={v => setColorScheme(v as 'auto' | 'light' | 'dark')}
+          data={[
+            { value: 'auto',  label: <Group gap={6} wrap="nowrap"><IconDeviceDesktop size={14} />System</Group> },
+            { value: 'light', label: <Group gap={6} wrap="nowrap"><IconSun size={14} />Light</Group> },
+            { value: 'dark',  label: <Group gap={6} wrap="nowrap"><IconMoon size={14} />Dark</Group> },
+          ]}
+        />
       </Paper>
 
       {/* Change password */}

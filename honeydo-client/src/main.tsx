@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { MantineProvider, createTheme } from '@mantine/core'
+import { MantineProvider, createTheme, localStorageColorSchemeManager } from '@mantine/core'
 import '@mantine/core/styles.css'
 import App from './App'
 import './index.css'
@@ -18,9 +18,17 @@ const theme = createTheme({
   },
 })
 
+// Persists the user's preference in localStorage under 'honeydo-color-scheme'.
+// Falls back to the OS/browser preference ('auto') when no value is stored.
+const colorSchemeManager = localStorageColorSchemeManager({ key: 'honeydo-color-scheme' })
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MantineProvider theme={theme}>
+    <MantineProvider
+      theme={theme}
+      colorSchemeManager={colorSchemeManager}
+      defaultColorScheme="auto"
+    >
       <BrowserRouter>
         <App />
       </BrowserRouter>
