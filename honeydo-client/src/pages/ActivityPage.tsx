@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { ActivityLogEntry, TodoList } from '../api/types'
+import {
+  Container, Title, Text, Anchor, Alert, Loader,
+  Group, Timeline,
+} from '@mantine/core'
+import {
+  IconPlus, IconCheck, IconTrash, IconUserPlus,
+  IconLock, IconActivity, IconAlertCircle,
+} from '@tabler/icons-react'
 
 const ACTION_LABELS: Record<string, string> = {
   ItemCreated:   'added a task',
@@ -9,6 +17,14 @@ const ACTION_LABELS: Record<string, string> = {
   ItemDeleted:   'deleted a task',
   MemberAdded:   'added a member',
   ListClosed:    'closed the list',
+}
+
+const ACTION_ICONS: Record<string, React.ReactNode> = {
+  ItemCreated:   <IconPlus size={12} />,
+  StatusChanged: <IconCheck size={12} />,
+  ItemDeleted:   <IconTrash size={12} />,
+  MemberAdded:   <IconUserPlus size={12} />,
+  ListClosed:    <IconLock size={12} />,
 }
 
 function friendlyAction(actionType: string): string {
@@ -48,70 +64,48 @@ export default function ActivityPage() {
   }, [listId])
 
   return (
-    <div style={{ maxWidth: 640, margin: '40px auto', padding: '0 16px' }}>
-      <Link to={`/lists/${listId}`} style={{ fontSize: 14, color: '#666' }}>
+    <Container size="md" pt="xl">
+      <Anchor component={Link} to={`/lists/${listId}`} size="sm" c="dimmed">
         ← Back to list
-      </Link>
+      </Anchor>
 
-      <h1 style={{ margin: '16px 0 4px' }}>
-        {list?.title ?? 'Activity'}
-      </h1>
-      <p style={{ margin: '0 0 24px', fontSize: 14, color: '#888' }}>
-        Activity log · newest first
-      </p>
+      <Title order={1} mt="sm" mb={4}>{list?.title ?? 'Activity'}</Title>
+      <Text size="sm" c="dimmed" mb="xl">Activity log · newest first</Text>
 
-      {loading && <p>Loading…</p>}
-      {error   && <p style={{ color: 'red', fontSize: 14 }}>{error}</p>}
+      {loading && <Group justify="center" mt="xl"><Loader size="sm" /></Group>}
+
+      {error && (
+        <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />}>
+          {error}
+        </Alert>
+      )}
 
       {!loading && !error && logs.length === 0 && (
-        <p style={{ color: '#888', fontSize: 14 }}>No activity recorded yet.</p>
+        <Text size="sm" c="dimmed">No activity recorded yet.</Text>
       )}
 
       {!loading && !error && logs.length > 0 && (
-        <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {logs.map((log, i) => (
-            <li
+        <Timeline active={logs.length - 1} bulletSize={24} lineWidth={2}>
+          {logs.map(log => (
+            <Timeline.Item
               key={log.id}
-              style={{
-                display:       'flex',
-                gap:           16,
-                paddingBottom: 20,
-                position:      'relative',
-              }}
+              bullet={ACTION_ICONS[log.actionType] ?? <IconActivity size={12} />}
+              title={
+                <Text size="sm">
+                  <Text span fw={600}>{log.actorName}</Text>
+                  {' '}
+                  <Text span c="dimmed">{friendlyAction(log.actionType)}</Text>
+                </Text>
+              }
             >
-              {/* Timeline spine */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-                <div style={{
-                  width:        10,
-                  height:       10,
-                  borderRadius: '50%',
-                  background:   '#0a84ff',
-                  flexShrink:   0,
-                  marginTop:    4,
-                }} />
-                {i < logs.length - 1 && (
-                  <div style={{ width: 2, flex: 1, background: '#e0e0e0', marginTop: 4 }} />
-                )}
-              </div>
-
-              {/* Entry content */}
-              <div style={{ paddingBottom: 4 }}>
-                <span style={{ fontWeight: 600 }}>{log.actorName}</span>
-                {' '}
-                <span style={{ color: '#333' }}>{friendlyAction(log.actionType)}</span>
-                {log.detail && (
-                  <div style={{ fontSize: 13, color: '#555', marginTop: 2, fontStyle: 'italic' }}>
-                    {log.detail}
-                  </div>
-                )}
-                <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
-                  {formatTimestamp(log.timestamp)}
-                </div>
-              </div>
-            </li>
+              {log.detail && (
+                <Text size="xs" fs="italic" c="dimmed" mt={2}>{log.detail}</Text>
+              )}
+              <Text size="xs" c="dimmed" mt={2}>{formatTimestamp(log.timestamp)}</Text>
+            </Timeline.Item>
           ))}
-        </ul>
+        </Timeline>
       )}
-    </div>
+    </Container>
   )
 }
