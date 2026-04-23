@@ -53,7 +53,6 @@ public class CloseListCommandHandler(AppDbContext db) : IRequestHandler<CloseLis
         await db.SaveChangesAsync(ct);
 
         var memberCount = await db.ListMembers.CountAsync(m => m.ListId == request.ListId, ct);
-        var itemCount = items.Count;
         var ownerName = await db.ListMembers
             .Where(m => m.ListId == request.ListId && m.Role == MemberRole.Owner)
             .Select(m => m.Profile.DisplayName)
@@ -65,7 +64,10 @@ public class CloseListCommandHandler(AppDbContext db) : IRequestHandler<CloseLis
             membership.Role,
             ownerName,
             memberCount,
-            itemCount,
+            items.Count(s => s == 1),
+            items.Count(s => s == 2),
+            items.Count(s => s == 3),
+            items.Count(s => s == 4),
             membership.List.CreatedAt,
             membership.List.UpdatedAt,
             membership.List.ClosedAt,

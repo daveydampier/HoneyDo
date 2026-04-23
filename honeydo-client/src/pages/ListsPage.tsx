@@ -95,12 +95,22 @@ export default function ListsPage() {
     return list.tags.filter(t => selectedTagIds.has(t.id))
   }
 
+  const STATUS_CHIPS = [
+    { key: 'notStartedCount', label: 'not started', color: '#868e96' },
+    { key: 'partialCount',    label: 'partial',     color: '#f59f00' },
+    { key: 'completeCount',   label: 'complete',    color: '#2f9e44' },
+    { key: 'abandonedCount',  label: 'abandoned',   color: '#e03131' },
+  ] as const
+
   const listRow = (list: TodoList, closed = false) => {
     const matched = matchedTags(list)
+    const totalItems = list.notStartedCount + list.partialCount + list.completeCount + list.abandonedCount
+
     return (
       <Paper key={list.id} p="sm" radius="md" withBorder style={closed ? { opacity: 0.7 } : undefined}>
-        <Group gap="sm" wrap="nowrap">
-          <Stack gap={4} flex={1} style={{ minWidth: 0 }}>
+        <Group gap="sm" wrap="nowrap" align="center">
+          {/* Title + matched tag indicators */}
+          <Stack gap={4} style={{ minWidth: 0, width: 180, flexShrink: 0 }}>
             <Anchor
               component={Link}
               to={`/lists/${list.id}`}
@@ -110,7 +120,6 @@ export default function ListsPage() {
             >
               {list.title}
             </Anchor>
-            {/* Matched tag indicators */}
             {matched.length > 0 && (
               <Group gap={4}>
                 {matched.map(tag => (
@@ -127,8 +136,27 @@ export default function ListsPage() {
               </Group>
             )}
           </Stack>
+
+          {/* Status breakdown */}
+          <Group gap="xs" flex={1} wrap="nowrap">
+            {totalItems === 0 ? (
+              <Text size="xs" c="dimmed">No tasks yet</Text>
+            ) : (
+              STATUS_CHIPS.map(({ key, label, color }) => {
+                const count = list[key]
+                if (count === 0) return null
+                return (
+                  <Text key={key} size="xs" style={{ whiteSpace: 'nowrap', color }}>
+                    <Text span fw={600}>{count}</Text> {label}
+                  </Text>
+                )
+              })
+            )}
+          </Group>
+
+          {/* Owner + delete */}
           <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {list.itemCount} item{list.itemCount !== 1 ? 's' : ''} · {list.ownerName}
+            {list.ownerName}
           </Text>
           {list.role === 'Owner' && (
             <Button

@@ -34,13 +34,31 @@ public class UpdateListCommandHandler(AppDbContext db) : IRequestHandler<UpdateL
         await db.SaveChangesAsync(ct);
 
         var memberCount = await db.ListMembers.CountAsync(m => m.ListId == request.ListId, ct);
-        var itemCount = await db.TodoItems.CountAsync(i => i.ListId == request.ListId, ct);
+
+        var statusCounts = await db.TodoItems
+            .Where(i => i.ListId == request.ListId)
+            .GroupBy(i => i.StatusId)
+            .Select(g => new { StatusId = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
 
         var ownerName = await db.ListMembers
             .Where(m => m.ListId == request.ListId && m.Role == MemberRole.Owner)
             .Select(m => m.Profile.DisplayName)
             .FirstOrDefaultAsync(ct) ?? "Unknown";
 
-        return new TodoListResponse(membership.List.Id, membership.List.Title, membership.Role, ownerName, memberCount, itemCount, membership.List.CreatedAt, membership.List.UpdatedAt, membership.List.ClosedAt, []);
+        return new TodoListResponse(
+            membership.List.Id,
+            membership.List.Title,
+            membership.Role,
+            ownerName,
+            memberCount,
+            statusCounts.FirstOrDefault(s => s.StatusId == 1)?.Count ?? 0,
+            statusCounts.FirstOrDefault(s => s.StatusId == 2)?.Count ?? 0,
+            statusCounts.FirstOrDefault(s => s.StatusId == 3)?.Count ?? 0,
+            statusCounts.FirstOrDefault(s => s.StatusId == 4)?.Count ?? 0,
+            membership.List.CreatedAt,
+            membership.List.UpdatedAt,
+            membership.List.ClosedAt,
+            []);
     }
 }

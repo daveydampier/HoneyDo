@@ -10,7 +10,10 @@ export interface TodoList {
   role: 'Owner' | 'Contributor'
   ownerName: string
   memberCount: number
-  itemCount: number
+  notStartedCount: number
+  partialCount: number
+  completeCount: number
+  abandonedCount: number
   createdAt: string
   updatedAt: string
   closedAt: string | null
