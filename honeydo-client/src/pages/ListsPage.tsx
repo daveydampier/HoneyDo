@@ -1,12 +1,13 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useMemo, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import type { TodoList, ApiError } from '../api/types'
+import type { TodoList, Tag, ApiError } from '../api/types'
 import {
   Container, Group, Title, Text, TextInput, Button,
-  Paper, Stack, Anchor, Loader, Alert,
+  Paper, Stack, Anchor, Loader, Alert, Badge, Tooltip,
 } from '@mantine/core'
-import { IconSearch, IconAlertCircle } from '@tabler/icons-react'
+import { IconSearch, IconAlertCircle, IconTag } from '@tabler/icons-react'
+import { getTagTextColor } from '../utils/tags'
 
 export default function ListsPage() {
   const [lists, setLists] = useState<TodoList[]>([])
@@ -15,13 +16,43 @@ export default function ListsPage() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set())
 
   const activeLists = lists.filter(l => !l.closedAt)
-  const filteredActiveLists = search.trim() === ''
-    ? activeLists
-    : activeLists.filter(l => l.title.toLowerCase().includes(search.trim().toLowerCase()))
   const closedLists = [...lists.filter(l => !!l.closedAt)]
     .sort((a, b) => new Date(b.closedAt!).getTime() - new Date(a.closedAt!).getTime())
+
+  // Union of all distinct tags across all active lists — for the filter bar
+  const availableTags = useMemo<Tag[]>(() => {
+    const seen = new Map<string, Tag>()
+    for (const list of activeLists) {
+      for (const tag of list.tags) {
+        if (!seen.has(tag.id)) seen.set(tag.id, tag)
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [lists])
+
+  // Apply text search and tag filter
+  const filteredActiveLists = useMemo(() => {
+    let result = activeLists
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      result = result.filter(l => l.title.toLowerCase().includes(q))
+    }
+    if (selectedTagIds.size > 0) {
+      result = result.filter(l => l.tags.some(t => selectedTagIds.has(t.id)))
+    }
+    return result
+  }, [activeLists, search, selectedTagIds])
+
+  function toggleTag(tagId: string) {
+    setSelectedTagIds(prev => {
+      const next = new Set(prev)
+      next.has(tagId) ? next.delete(tagId) : next.add(tagId)
+      return next
+    })
+  }
 
   async function handleDelete(list: TodoList) {
     if (list.role !== 'Owner') return
@@ -58,53 +89,65 @@ export default function ListsPage() {
     }
   }
 
-  const listRow = (list: TodoList) => (
-    <Paper key={list.id} p="sm" radius="md" withBorder>
-      <Group gap="sm" wrap="nowrap">
-        <Anchor component={Link} to={`/lists/${list.id}`} fw={600} flex={1} truncate>
-          {list.title}
-        </Anchor>
-        <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-          {list.itemCount} item{list.itemCount !== 1 ? 's' : ''} · {list.ownerName}
-        </Text>
-        {list.role === 'Owner' && (
-          <Button
-            variant="subtle"
-            color="red"
-            size="xs"
-            loading={deletingId === list.id}
-            onClick={() => handleDelete(list)}
-          >
-            Delete
-          </Button>
-        )}
-      </Group>
-    </Paper>
-  )
+  // Tags on a list that match the active filter (to show as indicators)
+  function matchedTags(list: TodoList): Tag[] {
+    if (selectedTagIds.size === 0) return []
+    return list.tags.filter(t => selectedTagIds.has(t.id))
+  }
 
-  const closedRow = (list: TodoList) => (
-    <Paper key={list.id} p="sm" radius="md" withBorder style={{ opacity: 0.7 }}>
-      <Group gap="sm" wrap="nowrap">
-        <Anchor component={Link} to={`/lists/${list.id}`} fw={600} flex={1} truncate c="dimmed">
-          {list.title}
-        </Anchor>
-        <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-          {list.itemCount} item{list.itemCount !== 1 ? 's' : ''} · {list.ownerName}
-        </Text>
-        {list.role === 'Owner' && (
-          <Button
-            variant="subtle"
-            color="red"
-            size="xs"
-            loading={deletingId === list.id}
-            onClick={() => handleDelete(list)}
-          >
-            Delete
-          </Button>
-        )}
-      </Group>
-    </Paper>
-  )
+  const listRow = (list: TodoList, closed = false) => {
+    const matched = matchedTags(list)
+    return (
+      <Paper key={list.id} p="sm" radius="md" withBorder style={closed ? { opacity: 0.7 } : undefined}>
+        <Group gap="sm" wrap="nowrap">
+          <Stack gap={4} flex={1} style={{ minWidth: 0 }}>
+            <Anchor
+              component={Link}
+              to={`/lists/${list.id}`}
+              fw={600}
+              c={closed ? 'dimmed' : undefined}
+              truncate
+            >
+              {list.title}
+            </Anchor>
+            {/* Matched tag indicators */}
+            {matched.length > 0 && (
+              <Group gap={4}>
+                {matched.map(tag => (
+                  <Badge
+                    key={tag.id}
+                    size="xs"
+                    leftSection={<IconTag size={9} />}
+                    style={{ background: tag.color, color: getTagTextColor(tag.color) }}
+                    variant="filled"
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+          </Stack>
+          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {list.itemCount} item{list.itemCount !== 1 ? 's' : ''} · {list.ownerName}
+          </Text>
+          {list.role === 'Owner' && (
+            <Button
+              variant="subtle"
+              color="red"
+              size="xs"
+              loading={deletingId === list.id}
+              onClick={() => handleDelete(list)}
+              style={{ flexShrink: 0 }}
+            >
+              Delete
+            </Button>
+          )}
+        </Group>
+      </Paper>
+    )
+  }
+
+  const hasFilters = search.trim() !== '' || selectedTagIds.size > 0
 
   return (
     <Container size="md" pt="xl">
@@ -135,27 +178,78 @@ export default function ListsPage() {
         <Stack gap="xl">
           {/* Active lists */}
           <section>
-            <Group gap="sm" mb="xs" align="center">
-              <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em', flexShrink: 0 }}>
+            {/* Search + tag filter toolbar */}
+            {activeLists.length > 0 && (
+              <Stack gap="xs" mb="sm">
+                <Group gap="sm" align="center">
+                  <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em', flexShrink: 0 }}>
+                    Active
+                  </Text>
+                  <TextInput
+                    style={{ flex: '0 1 220px' }}
+                    size="xs"
+                    placeholder="Search lists…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    leftSection={<IconSearch size={12} />}
+                  />
+                  {hasFilters && (
+                    <Tooltip label="Clear all filters">
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        color="gray"
+                        onClick={() => { setSearch(''); setSelectedTagIds(new Set()) }}
+                      >
+                        Clear
+                      </Button>
+                    </Tooltip>
+                  )}
+                </Group>
+
+                {/* Tag filter pills */}
+                {availableTags.length > 0 && (
+                  <Group gap="xs" pl={2}>
+                    {availableTags.map(tag => {
+                      const active = selectedTagIds.has(tag.id)
+                      return (
+                        <Badge
+                          key={tag.id}
+                          size="sm"
+                          variant={active ? 'filled' : 'outline'}
+                          style={{
+                            cursor: 'pointer',
+                            background: active ? tag.color : 'transparent',
+                            color: active ? getTagTextColor(tag.color) : tag.color,
+                            borderColor: tag.color,
+                          }}
+                          onClick={() => toggleTag(tag.id)}
+                          leftSection={<IconTag size={10} />}
+                        >
+                          {tag.name}
+                        </Badge>
+                      )
+                    })}
+                  </Group>
+                )}
+              </Stack>
+            )}
+
+            {/* Active heading when no search bar (no active lists) */}
+            {activeLists.length === 0 && (
+              <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb="xs" style={{ letterSpacing: '0.05em' }}>
                 Active
               </Text>
-              {activeLists.length > 0 && (
-                <TextInput
-                  flex={1}
-                  size="xs"
-                  placeholder="Search lists…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  leftSection={<IconSearch size={12} />}
-                />
-              )}
-            </Group>
+            )}
+
             {activeLists.length === 0 ? (
               <Text size="sm" c="dimmed">No active lists. Create one above.</Text>
             ) : filteredActiveLists.length === 0 ? (
-              <Text size="sm" c="dimmed">No lists match "{search.trim()}".</Text>
+              <Text size="sm" c="dimmed">
+                No lists match your{search.trim() ? ' search' : ''}{search.trim() && selectedTagIds.size > 0 ? ' and' : ''}{selectedTagIds.size > 0 ? ' tag filter' : ''}.
+              </Text>
             ) : (
-              <Stack gap="sm">{filteredActiveLists.map(listRow)}</Stack>
+              <Stack gap="sm">{filteredActiveLists.map(l => listRow(l))}</Stack>
             )}
           </section>
 
@@ -165,7 +259,7 @@ export default function ListsPage() {
               <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb="xs" style={{ letterSpacing: '0.05em' }}>
                 Closed
               </Text>
-              <Stack gap="sm">{closedLists.map(closedRow)}</Stack>
+              <Stack gap="sm">{closedLists.map(l => listRow(l, true))}</Stack>
             </section>
           )}
         </Stack>

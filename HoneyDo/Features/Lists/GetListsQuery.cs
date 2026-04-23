@@ -1,5 +1,6 @@
 using HoneyDo.Data;
 using HoneyDo.Domain;
+using HoneyDo.Features.Items;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,8 @@ public record TodoListResponse(
     int ItemCount,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    DateTime? ClosedAt);
+    DateTime? ClosedAt,
+    IEnumerable<TagDto> Tags);
 
 public class GetListsQueryHandler(AppDbContext db) : IRequestHandler<GetListsQuery, IEnumerable<TodoListResponse>>
 {
@@ -45,6 +47,17 @@ public class GetListsQueryHandler(AppDbContext db) : IRequestHandler<GetListsQue
             .Select(m => new { m.ListId, m.Profile.DisplayName })
             .ToDictionaryAsync(m => m.ListId, m => m.DisplayName, ct);
 
+        // Distinct tags applied to any item in each list
+        var rawTags = await db.TodoItemTags
+            .Where(t => listIds.Contains(t.Item.ListId))
+            .Select(t => new { t.Item.ListId, t.Tag.Id, t.Tag.Name, t.Tag.Color })
+            .Distinct()
+            .ToListAsync(ct);
+
+        var tagsByList = rawTags
+            .GroupBy(t => t.ListId)
+            .ToDictionary(g => g.Key, g => g.Select(t => new TagDto(t.Id, t.Name, t.Color)).ToList());
+
         return memberships.Select(m => new TodoListResponse(
             m.ListId,
             m.ListTitle,
@@ -54,6 +67,7 @@ public class GetListsQueryHandler(AppDbContext db) : IRequestHandler<GetListsQue
             m.ItemCount,
             m.ListCreatedAt,
             m.ListUpdatedAt,
-            m.ListClosedAt));
+            m.ListClosedAt,
+            tagsByList.GetValueOrDefault(m.ListId) ?? []));
     }
 }

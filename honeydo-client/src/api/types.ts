@@ -14,6 +14,7 @@ export interface TodoList {
   createdAt: string
   updatedAt: string
   closedAt: string | null
+  tags: Tag[]
 }
 
 export interface Tag {
