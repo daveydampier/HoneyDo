@@ -5,13 +5,19 @@ import { api } from '../api/client'
 import type { Profile } from '../api/types'
 import AvatarCircle from './AvatarCircle'
 import {
-  AppShell, Group, Text, Button, UnstyledButton,
+  AppShell, Group, Text, Button, UnstyledButton, ActionIcon,
+  useComputedColorScheme, useMantineColorScheme,
 } from '@mantine/core'
+import { IconSun, IconMoon } from '@tabler/icons-react'
 
 export default function AppLayout() {
   const { displayName, logout } = useAuth()
   const navigate = useNavigate()
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  const { setColorScheme } = useMantineColorScheme()
+  // useComputedColorScheme resolves 'auto' → the actual 'light' | 'dark' the OS chose
+  const computed = useComputedColorScheme('light', { getInitialValueInEffect: true })
 
   useEffect(() => {
     api.get<Profile>('/profile')
@@ -43,6 +49,18 @@ export default function AppLayout() {
             <Button variant="subtle" color="gray" size="xs" onClick={() => navigate('/friends')}>
               Friends
             </Button>
+
+            {/* Quick dark/light toggle — flips between the two explicit modes */}
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              aria-label="Toggle color scheme"
+              onClick={() => setColorScheme(computed === 'dark' ? 'light' : 'dark')}
+            >
+              {computed === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
+            </ActionIcon>
+
             <Button variant="subtle" color="gray" size="xs" onClick={logout}>
               Sign out
             </Button>
