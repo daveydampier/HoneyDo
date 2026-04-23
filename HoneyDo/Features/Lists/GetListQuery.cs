@@ -1,6 +1,7 @@
 using HoneyDo.Common.Exceptions;
 using HoneyDo.Data;
 using HoneyDo.Domain;
+using HoneyDo.Features.Items;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,6 +34,13 @@ public class GetListQueryHandler(AppDbContext db) : IRequestHandler<GetListQuery
             .Select(m => m.Profile.DisplayName)
             .FirstOrDefaultAsync(ct) ?? "Unknown";
 
+        var tags = await db.TodoItemTags
+            .Where(t => t.Item.ListId == request.ListId)
+            .Select(t => new { t.Tag.Id, t.Tag.Name, t.Tag.Color })
+            .Distinct()
+            .Select(t => new TagDto(t.Id, t.Name, t.Color))
+            .ToListAsync(ct);
+
         return new TodoListResponse(
             membership.ListId,
             membership.ListTitle,
@@ -42,6 +50,7 @@ public class GetListQueryHandler(AppDbContext db) : IRequestHandler<GetListQuery
             membership.ItemCount,
             membership.ListCreatedAt,
             membership.ListUpdatedAt,
-            membership.ListClosedAt);
+            membership.ListClosedAt,
+            tags);
     }
 }

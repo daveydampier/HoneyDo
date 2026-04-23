@@ -41,6 +41,6 @@ public class UpdateListCommandHandler(AppDbContext db) : IRequestHandler<UpdateL
             .Select(m => m.Profile.DisplayName)
             .FirstOrDefaultAsync(ct) ?? "Unknown";
 
-        return new TodoListResponse(membership.List.Id, membership.List.Title, membership.Role, ownerName, memberCount, itemCount, membership.List.CreatedAt, membership.List.UpdatedAt, membership.List.ClosedAt);
+        return new TodoListResponse(membership.List.Id, membership.List.Title, membership.Role, ownerName, memberCount, itemCount, membership.List.CreatedAt, membership.List.UpdatedAt, membership.List.ClosedAt, []);
     }
 }

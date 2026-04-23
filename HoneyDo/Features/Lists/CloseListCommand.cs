@@ -68,6 +68,7 @@ public class CloseListCommandHandler(AppDbContext db) : IRequestHandler<CloseLis
             itemCount,
             membership.List.CreatedAt,
             membership.List.UpdatedAt,
-            membership.List.ClosedAt);
+            membership.List.ClosedAt,
+            []);
     }
 }
