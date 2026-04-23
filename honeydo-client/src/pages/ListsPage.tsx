@@ -4,10 +4,17 @@ import { api } from '../api/client'
 import type { TodoList, Tag, ApiError } from '../api/types'
 import {
   Container, Group, Title, Text, TextInput, Button,
-  Paper, Stack, Anchor, Loader, Alert, Badge,
+  Paper, Stack, Anchor, Loader, Alert, Badge, Popover,
 } from '@mantine/core'
-import { IconSearch, IconAlertCircle, IconTag } from '@tabler/icons-react'
+import { IconSearch, IconAlertCircle, IconTag, IconChevronDown } from '@tabler/icons-react'
 import { getTagTextColor } from '../utils/tags'
+
+const STATUS_CHIPS = [
+  { key: 'notStartedCount', label: 'not started', color: '#868e96' },
+  { key: 'partialCount',    label: 'partial',     color: '#f59f00' },
+  { key: 'completeCount',   label: 'complete',    color: '#2f9e44' },
+  { key: 'abandonedCount',  label: 'abandoned',   color: '#e03131' },
+] as const
 
 export default function ListsPage() {
   const [lists, setLists] = useState<TodoList[]>([])
@@ -17,12 +24,13 @@ export default function ListsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set())
+  const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
 
   const activeLists = lists.filter(l => !l.closedAt)
   const closedLists = [...lists.filter(l => !!l.closedAt)]
     .sort((a, b) => new Date(b.closedAt!).getTime() - new Date(a.closedAt!).getTime())
 
-  // Union of all distinct tags across all active lists — for the filter bar
+  // Union of all distinct tags across all active lists — for the filter popover
   const availableTags = useMemo<Tag[]>(() => {
     const seen = new Map<string, Tag>()
     for (const list of activeLists) {
@@ -89,18 +97,13 @@ export default function ListsPage() {
     }
   }
 
-  // Tags on a list that match the active filter (to show as indicators)
+  // Tags on a list that match the active filter (shown as indicators on each row)
   function matchedTags(list: TodoList): Tag[] {
     if (selectedTagIds.size === 0) return []
     return list.tags.filter(t => selectedTagIds.has(t.id))
   }
 
-  const STATUS_CHIPS = [
-    { key: 'notStartedCount', label: 'not started', color: '#868e96' },
-    { key: 'partialCount',    label: 'partial',     color: '#f59f00' },
-    { key: 'completeCount',   label: 'complete',    color: '#2f9e44' },
-    { key: 'abandonedCount',  label: 'abandoned',   color: '#e03131' },
-  ] as const
+  const hasFilters = search.trim() !== '' || selectedTagIds.size > 0
 
   const listRow = (list: TodoList, closed = false) => {
     const matched = matchedTags(list)
@@ -109,6 +112,7 @@ export default function ListsPage() {
     return (
       <Paper key={list.id} p="sm" radius="md" withBorder style={closed ? { opacity: 0.7 } : undefined}>
         <Group gap="sm" wrap="nowrap" align="center">
+
           {/* Title + matched tag indicators */}
           <Stack gap={4} style={{ minWidth: 0, width: 180, flexShrink: 0 }}>
             <Anchor
@@ -165,24 +169,23 @@ export default function ListsPage() {
               </Text>
             )}
           </Stack>
-          {list.role === 'Owner' && (
-            <Button
-              variant="subtle"
-              color="red"
-              size="xs"
-              loading={deletingId === list.id}
-              onClick={() => handleDelete(list)}
-              style={{ flexShrink: 0 }}
-            >
-              Delete
-            </Button>
-          )}
+
+          {/* Delete — always reserve the space; hidden when not owner */}
+          <Button
+            variant="subtle"
+            color="red"
+            size="xs"
+            loading={deletingId === list.id}
+            onClick={() => list.role === 'Owner' ? handleDelete(list) : undefined}
+            style={{ flexShrink: 0, visibility: list.role === 'Owner' ? 'visible' : 'hidden' }}
+          >
+            Delete
+          </Button>
+
         </Group>
       </Paper>
     )
   }
-
-  const hasFilters = search.trim() !== '' || selectedTagIds.size > 0
 
   return (
     <Container size="md" pt="xl">
@@ -213,7 +216,7 @@ export default function ListsPage() {
         <Stack gap="xl">
           {/* Active lists */}
           <section>
-            {/* Section heading row */}
+            {/* Section heading */}
             <Group justify="space-between" align="center" mb="xs">
               <Text size="sm" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.06em' }}>
                 Active
@@ -230,12 +233,11 @@ export default function ListsPage() {
               )}
             </Group>
 
-            {/* Search + tag filter row */}
+            {/* Filter row — only shown when there are active lists */}
             {activeLists.length > 0 && (
-              <Group gap="sm" wrap="nowrap" mb="sm" align="center">
-                {/* Search — fixed width on the left */}
+              <Group gap="sm" mb="sm" align="center">
                 <TextInput
-                  style={{ width: 200, flexShrink: 0 }}
+                  style={{ flex: 1 }}
                   size="xs"
                   placeholder="Search lists…"
                   value={search}
@@ -243,40 +245,73 @@ export default function ListsPage() {
                   leftSection={<IconSearch size={12} />}
                 />
 
-                {/* Tag pills — scrollable strip on the right */}
+                {/* Tags popover — only rendered when tags exist */}
                 {availableTags.length > 0 && (
-                  <div style={{
-                    flex: 1,
-                    overflowX: 'auto',
-                    display: 'flex',
-                    gap: 6,
-                    alignItems: 'center',
-                    padding: '3px 2px',
-                    // subtle fade on the right edge to hint there's more
-                    maskImage: 'linear-gradient(to right, black 85%, transparent 100%)',
-                  }}>
-                    {availableTags.map(tag => {
-                      const active = selectedTagIds.has(tag.id)
-                      return (
-                        <Badge
-                          key={tag.id}
-                          size="sm"
-                          variant={active ? 'filled' : 'outline'}
-                          style={{
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                            background: active ? tag.color : 'transparent',
-                            color: active ? getTagTextColor(tag.color) : tag.color,
-                            borderColor: tag.color,
-                          }}
-                          onClick={() => toggleTag(tag.id)}
-                          leftSection={<IconTag size={10} />}
-                        >
-                          {tag.name}
-                        </Badge>
-                      )
-                    })}
-                  </div>
+                  <Popover
+                    opened={tagPopoverOpen}
+                    onChange={setTagPopoverOpen}
+                    position="bottom-end"
+                    shadow="md"
+                    width={220}
+                  >
+                    <Popover.Target>
+                      <Button
+                        size="xs"
+                        variant={selectedTagIds.size > 0 ? 'filled' : 'default'}
+                        leftSection={<IconTag size={13} />}
+                        rightSection={
+                          selectedTagIds.size > 0
+                            ? <Badge size="xs" circle variant="white" color="blue">{selectedTagIds.size}</Badge>
+                            : <IconChevronDown size={12} />
+                        }
+                        onClick={() => setTagPopoverOpen(o => !o)}
+                      >
+                        Tags
+                      </Button>
+                    </Popover.Target>
+
+                    <Popover.Dropdown>
+                      <Stack gap="xs">
+                        <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>
+                          Filter by tag
+                        </Text>
+                        {availableTags.map(tag => {
+                          const active = selectedTagIds.has(tag.id)
+                          return (
+                            <Badge
+                              key={tag.id}
+                              size="md"
+                              variant={active ? 'filled' : 'outline'}
+                              fullWidth
+                              style={{
+                                cursor: 'pointer',
+                                justifyContent: 'flex-start',
+                                background: active ? tag.color : 'transparent',
+                                color: active ? getTagTextColor(tag.color) : tag.color,
+                                borderColor: tag.color,
+                              }}
+                              leftSection={<IconTag size={11} />}
+                              onClick={() => toggleTag(tag.id)}
+                            >
+                              {tag.name}
+                            </Badge>
+                          )
+                        })}
+                        {selectedTagIds.size > 0 && (
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            color="gray"
+                            fullWidth
+                            mt={4}
+                            onClick={() => setSelectedTagIds(new Set())}
+                          >
+                            Clear tag selection
+                          </Button>
+                        )}
+                      </Stack>
+                    </Popover.Dropdown>
+                  </Popover>
                 )}
               </Group>
             )}
