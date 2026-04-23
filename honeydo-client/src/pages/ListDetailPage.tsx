@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { TodoItem, PagedResult, TodoList, Member, AddableFriend, ApiError } from '../api/types'
 import { useAuth } from '../context/AuthContext'
@@ -11,9 +11,25 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+/** Returns true if a YYYY-MM-DD date string is strictly before today (local time). */
+function isDatePast(dateStr: string): boolean {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const d = new Date(dateStr + 'T00:00:00')
+  return d < today
+}
+
+/** Returns true if a task's due date should show an overdue warning. */
+function isOverdue(dueDate: string | null | undefined, statusId: number): boolean {
+  if (!dueDate) return false
+  if (statusId === 3 || statusId === 4) return false  // Complete or Abandoned — not overdue
+  return isDatePast(dueDate)
+}
+
 export default function ListDetailPage() {
   const { listId } = useParams<{ listId: string }>()
   const { profileId } = useAuth()
+  const navigate = useNavigate()
 
   // List metadata
   const [list, setList] = useState<TodoList | null>(null)
@@ -124,6 +140,11 @@ export default function ListDetailPage() {
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
     setCreateError(null)
+
+    if (dueDate && isDatePast(dueDate)) {
+      if (!confirm('The due date you entered is in the past. Add this task anyway?')) return
+    }
+
     try {
       const item = await api.post<TodoItem>(`/lists/${listId}/items`, {
         content,
@@ -220,6 +241,12 @@ export default function ListDetailPage() {
               Close List
             </button>
           )}
+          <button
+            onClick={() => navigate(`/lists/${listId}/activity`)}
+            style={{ fontSize: 13, background: 'none', border: '1px solid #ccc', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', color: '#555' }}
+          >
+            Activity
+          </button>
           <button
             onClick={() => setShowMembers(v => !v)}
             style={{ fontSize: 13, background: 'none', border: '1px solid #ccc', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', color: '#555' }}
@@ -456,8 +483,22 @@ export default function ListDetailPage() {
                     <span style={{ width: 90, flexShrink: 0, fontSize: 12, color: '#888' }}>
                       {formatDate(item.createdAt)}
                     </span>
-                    <span style={{ width: 90, flexShrink: 0, fontSize: 12, color: '#888' }}>
-                      {item.dueDate ?? <span style={{ color: '#ccc' }}>—</span>}
+                    <span style={{
+                      width: 90,
+                      flexShrink: 0,
+                      fontSize: 12,
+                      color: isOverdue(item.dueDate, item.status.id) ? '#c00' : '#888',
+                      fontWeight: isOverdue(item.dueDate, item.status.id) ? 600 : 400,
+                    }}>
+                      {item.dueDate
+                        ? <>
+                            {item.dueDate}
+                            {isOverdue(item.dueDate, item.status.id) && (
+                              <span title="Overdue" style={{ marginLeft: 4 }}>⚠️</span>
+                            )}
+                          </>
+                        : <span style={{ color: '#ccc' }}>—</span>
+                      }
                     </span>
                     <div style={{ width: 90, flexShrink: 0, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       {!isClosed && (

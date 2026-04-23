@@ -7,6 +7,7 @@ import ListsPage from './pages/ListsPage'
 import ListDetailPage from './pages/ListDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import FriendsPage from './pages/FriendsPage'
+import ActivityPage from './pages/ActivityPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth()
@@ -20,6 +21,7 @@ function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/" element={<PrivateRoute><ListsPage /></PrivateRoute>} />
       <Route path="/lists/:listId" element={<PrivateRoute><ListDetailPage /></PrivateRoute>} />
+      <Route path="/lists/:listId/activity" element={<PrivateRoute><ActivityPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       <Route path="/friends" element={<PrivateRoute><FriendsPage /></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />

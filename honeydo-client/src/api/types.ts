@@ -96,6 +96,13 @@ export interface AddableFriend {
   avatarUrl: string | null
 }
 
+export interface ActivityLogEntry {
+  id: string
+  actionType: string
+  actorName: string
+  timestamp: string
+}
+
 export interface ApiError {
   status: number
   title: string

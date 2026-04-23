@@ -49,7 +49,11 @@
       "Bash(sqlite3 \"C:/Users/davey/source/repos/HoneyDo/HoneyDo/honeydo.db\" \"ALTER TABLE TodoLists ADD COLUMN ClosedAt TEXT; INSERT INTO \\\\\"__EFMigrationsHistory\\\\\" \\(MigrationId, ProductVersion\\) VALUES \\('20260422180000_AddListClose', '10.0.5'\\);\")",
       "Bash(python3 -c ' *)",
       "Bash(dotnet script *)",
-      "Bash(dotnet tool *)"
+      "Bash(dotnet tool *)",
+      "Bash(npm install *)",
+      "Bash(xargs grep *)",
+      "Bash(xargs ls *)",
+      "Bash(dir \"C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo\\\\honeydo-client\\\\\" /b | findstr -i \"dockerfile nginx .dockerignore\")"
     ]
   }
 }

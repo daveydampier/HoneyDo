@@ -1,0 +1,55 @@
+name: honeydo
+
+services:
+
+  # ── API ────────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: HoneyDo/Dockerfile
+    container_name: honeydo-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      # Database — stored on a named volume so data survives rebuilds
+      ConnectionStrings__DefaultConnection: "Data Source=/app/data/honeydo.db"
+      # JWT — value comes from .env (never committed to source control)
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: HoneyDo
+      Jwt__Audience: HoneyDo
+      Jwt__ExpiryHours: "24"
+      # CORS — only the nginx origin needs access; the API is not public
+      AllowedOrigins: "http://localhost"
+      # Used in invitation e-mails
+      AppUrl: "http://localhost"
+    volumes:
+      - db-data:/app/data
+    networks:
+      - honeydo-net
+    # The API is intentionally not port-mapped to the host.
+    # All traffic flows through the nginx reverse proxy.
+
+  # ── Client (nginx) ─────────────────────────────────────────────────────────
+  client:
+    build:
+      context: ./honeydo-client
+      dockerfile: Dockerfile
+    container_name: honeydo-client
+    restart: unless-stopped
+    ports:
+      - "${PORT:-80}:80"
+    depends_on:
+      - api
+    networks:
+      - honeydo-net
+
+# ── Networking ─────────────────────────────────────────────────────────────
+networks:
+  honeydo-net:
+    driver: bridge
+
+# ── Volumes ────────────────────────────────────────────────────────────────
+volumes:
+  db-data:
+    driver: local

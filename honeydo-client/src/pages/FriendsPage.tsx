@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { FriendsResult, FriendInfo, ReceivedRequestInfo, SentRequestInfo, SendRequestResult, ApiError } from '../api/types'
+import AvatarCircle from '../components/AvatarCircle'
 
 export default function FriendsPage() {
   const navigate = useNavigate()
@@ -159,6 +160,7 @@ export default function FriendsPage() {
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {data.friends.map((friend: FriendInfo) => (
                   <li key={friend.profileId} style={{ background: '#fff', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <AvatarCircle avatarUrl={friend.avatarUrl} displayName={friend.displayName} size={40} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600 }}>{friend.displayName}</div>
                       <div style={{ fontSize: 13, color: '#666' }}>{friend.email}</div>

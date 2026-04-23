@@ -18,7 +18,7 @@ public class UpdateProfileCommandValidator : AbstractValidator<UpdateProfileComm
     {
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(256);
         RuleFor(x => x.PhoneNumber).MaximumLength(20).When(x => x.PhoneNumber is not null);
-        RuleFor(x => x.AvatarUrl).MaximumLength(512).When(x => x.AvatarUrl is not null);
+        // No length limit on AvatarUrl — it may hold a base64 data URL from an image upload.
     }
 }
 

@@ -50,6 +50,10 @@ public class ListsController(IMediator mediator) : ControllerBase
     [HttpGet("{listId:guid}/addable-friends")]
     public async Task<ActionResult<IEnumerable<AddableFriendResponse>>> GetAddableFriends(Guid listId, CancellationToken ct) =>
         Ok(await mediator.Send(new GetAddableFriendsQuery(listId, User.GetProfileId()), ct));
+
+    [HttpGet("{listId:guid}/activity")]
+    public async Task<ActionResult<IEnumerable<ActivityLogResponse>>> GetActivity(Guid listId, CancellationToken ct) =>
+        Ok(await mediator.Send(new GetActivityLogsQuery(listId, User.GetProfileId()), ct));
 }
 
 public record CreateListRequest(string Title);

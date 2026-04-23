@@ -24,6 +24,16 @@ public class ProfileController(IMediator mediator) : ControllerBase
         return Ok(await mediator.Send(command, ct));
     }
 
+    [HttpPost("avatar")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ProfileResponse>> UploadAvatar(IFormFile file, CancellationToken ct)
+    {
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var command = new UploadAvatarCommand(User.GetProfileId(), ms.ToArray(), file.ContentType);
+        return Ok(await mediator.Send(command, ct));
+    }
+
     [HttpPatch("password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
     {

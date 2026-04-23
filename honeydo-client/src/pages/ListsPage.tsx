@@ -2,7 +2,8 @@ import { useState, useEffect, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/client'
-import type { TodoList, ApiError } from '../api/types'
+import type { TodoList, Profile, ApiError } from '../api/types'
+import AvatarCircle from '../components/AvatarCircle'
 
 export default function ListsPage() {
   const { displayName, logout } = useAuth()
@@ -12,6 +13,13 @@ export default function ListsPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.get<Profile>('/profile')
+      .then(p => setAvatarUrl(p.avatarUrl))
+      .catch(() => {})
+  }, [])
 
   const activeLists = lists.filter(l => !l.closedAt)
   const closedLists = [...lists.filter(l => !!l.closedAt)]
@@ -75,8 +83,14 @@ export default function ListsPage() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1>HoneyDo</h1>
         <span style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={() => navigate('/profile')}
+            style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: 0 }}
+          >
+            <AvatarCircle avatarUrl={avatarUrl} displayName={displayName ?? ''} size={28} />
+            {displayName}
+          </button>
           <button onClick={() => navigate('/friends')} style={{ background: 'none', border: 'none', color: '#666', fontSize: 14, cursor: 'pointer' }}>Friends</button>
-          <button onClick={() => navigate('/profile')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 14, cursor: 'pointer' }}>{displayName}</button>
           <button onClick={logout} style={{ background: 'none', border: 'none', color: '#666', fontSize: 14, cursor: 'pointer' }}>Sign out</button>
         </span>
       </header>

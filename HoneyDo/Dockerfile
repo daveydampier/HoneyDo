@@ -26,5 +26,14 @@ RUN dotnet publish "./HoneyDo.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
+
+# Create the data directory for the SQLite database and give the app user
+# write access before switching back to the non-root user.
+# Without this, Docker creates the volume mount point owned by root and the
+# app cannot open the database file (SQLite error 14).
+USER root
+RUN mkdir -p /app/data && chown -R $APP_UID /app/data
+USER $APP_UID
+
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "HoneyDo.dll"]

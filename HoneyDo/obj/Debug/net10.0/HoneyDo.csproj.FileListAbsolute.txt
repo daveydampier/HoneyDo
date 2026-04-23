@@ -164,3 +164,4 @@ C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\ref\HoneyDo.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\bin\Debug\net10.0\MailKit.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\bin\Debug\net10.0\MimeKit.dll
+C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\HoneyDo.sourcelink.json
