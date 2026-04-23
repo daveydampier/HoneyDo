@@ -1,5 +1,4 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { FriendsResult, FriendInfo, ReceivedRequestInfo, SentRequestInfo, SendRequestResult, ApiError } from '../api/types'
 import AvatarCircle from '../components/AvatarCircle'
@@ -10,7 +9,6 @@ import {
 import { IconAlertCircle, IconCircleCheck } from '@tabler/icons-react'
 
 export default function FriendsPage() {
-  const navigate = useNavigate()
   const [data, setData] = useState<FriendsResult>({ friends: [], pendingReceived: [], pendingSent: [] })
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
@@ -80,12 +78,7 @@ export default function FriendsPage() {
 
   return (
     <Container size="md" pt="xl">
-      <Group justify="space-between" mb="lg">
-        <Title order={1}>Friends</Title>
-        <Button variant="subtle" color="gray" size="xs" onClick={() => navigate('/')}>
-          ← Back to lists
-        </Button>
-      </Group>
+      <Title order={2} mb="lg">Friends</Title>
 
       {/* Add a friend */}
       <Stack gap="xs" mb="xl">

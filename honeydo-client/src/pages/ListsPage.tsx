@@ -1,31 +1,20 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import type { TodoList, Profile, ApiError } from '../api/types'
-import AvatarCircle from '../components/AvatarCircle'
+import type { TodoList, ApiError } from '../api/types'
 import {
   Container, Group, Title, Text, TextInput, Button,
-  Paper, Stack, Anchor, Loader, Alert, UnstyledButton,
+  Paper, Stack, Anchor, Loader, Alert,
 } from '@mantine/core'
 import { IconSearch, IconAlertCircle } from '@tabler/icons-react'
 
 export default function ListsPage() {
-  const { displayName, logout } = useAuth()
-  const navigate = useNavigate()
   const [lists, setLists] = useState<TodoList[]>([])
   const [newTitle, setNewTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    api.get<Profile>('/profile')
-      .then(p => setAvatarUrl(p.avatarUrl))
-      .catch(() => {})
-  }, [])
 
   const activeLists = lists.filter(l => !l.closedAt)
   const filteredActiveLists = search.trim() === ''
@@ -119,24 +108,7 @@ export default function ListsPage() {
 
   return (
     <Container size="md" pt="xl">
-      <Group justify="space-between" mb="lg">
-        <Title order={1}>HoneyDo</Title>
-        <Group gap="xs">
-          <UnstyledButton
-            onClick={() => navigate('/profile')}
-            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-          >
-            <AvatarCircle avatarUrl={avatarUrl} displayName={displayName ?? ''} size={28} />
-            <Text size="sm">{displayName}</Text>
-          </UnstyledButton>
-          <Button variant="subtle" color="gray" size="xs" onClick={() => navigate('/friends')}>
-            Friends
-          </Button>
-          <Button variant="subtle" color="gray" size="xs" onClick={logout}>
-            Sign out
-          </Button>
-        </Group>
-      </Group>
+      <Title order={2} mb="lg">My Lists</Title>
 
       <form onSubmit={handleCreate}>
         <Group gap="sm" mb="md">
