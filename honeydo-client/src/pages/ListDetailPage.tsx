@@ -19,6 +19,32 @@ const STATUS_LABELS: Record<number, string> = { 1: 'Not Started', 2: 'Partial', 
 const STATUS_COLORS: Record<number, string> = { 1: 'gray', 2: 'yellow', 3: 'green', 4: 'red' }
 const NOTES_MAX = 256
 
+/** Mirror the backend sort priority so mutations instantly re-order the list. */
+function sortItems(items: TodoItem[], sortBy: 'DueDate' | 'CreatedAt', ascending: boolean): TodoItem[] {
+  return [...items].sort((a, b) => {
+    // 1. Active (Not Started / Partial) before resolved (Complete / Abandoned)
+    const aRes = (a.status.id === 3 || a.status.id === 4) ? 1 : 0
+    const bRes = (b.status.id === 3 || b.status.id === 4) ? 1 : 0
+    if (aRes !== bRes) return aRes - bRes
+
+    // 2. Starred before unstarred
+    const aStar = a.isStarred ? 0 : 1
+    const bStar = b.isStarred ? 0 : 1
+    if (aStar !== bStar) return aStar - bStar
+
+    // 3. User-selected sort (nulls last for DueDate)
+    if (sortBy === 'DueDate') {
+      if (!a.dueDate && !b.dueDate) return 0
+      if (!a.dueDate) return 1
+      if (!b.dueDate) return -1
+      const cmp = a.dueDate.localeCompare(b.dueDate)
+      return ascending ? cmp : -cmp
+    }
+    const cmp = a.createdAt.localeCompare(b.createdAt)
+    return ascending ? cmp : -cmp
+  })
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -191,7 +217,7 @@ export default function ListDetailPage() {
     setActionError(null)
     try {
       const updated = await api.patch<TodoItem>(`/lists/${listId}/items/${item.id}`, { statusId: next })
-      setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
+      setItems(prev => sortItems(prev.map(i => i.id === updated.id ? updated : i), sortBy, ascending))
     } catch {
       setActionError('Failed to update status. Please try again.')
     }
@@ -203,7 +229,7 @@ export default function ListDetailPage() {
       const updated = await api.patch<TodoItem>(`/lists/${listId}/items/${item.id}`, {
         isStarred: !item.isStarred,
       })
-      setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
+      setItems(prev => sortItems(prev.map(i => i.id === updated.id ? updated : i), sortBy, ascending))
     } catch {
       setActionError('Failed to update star. Please try again.')
     } finally {

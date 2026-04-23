@@ -17,17 +17,19 @@ public class ApplyTagCommandHandler(AppDbContext db) : IRequestHandler<ApplyTagC
 
         if (!isMember) throw new NotFoundException();
 
-        var itemExists = await db.TodoItems
-            .AnyAsync(i => i.Id == request.ItemId && i.ListId == request.ListId, ct);
-
-        if (!itemExists) throw new NotFoundException();
+        var itemContent = await db.TodoItems
+            .Where(i => i.Id == request.ItemId && i.ListId == request.ListId)
+            .Select(i => i.Content)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException();
 
         // The tag must belong to any current member of this list (not just the caller).
-        var tagBelongsToMember = await db.Tags
-            .AnyAsync(t => t.Id == request.TagId &&
-                db.ListMembers.Any(m => m.ListId == request.ListId && m.ProfileId == t.ProfileId), ct);
-
-        if (!tagBelongsToMember) throw new NotFoundException();
+        var tagName = await db.Tags
+            .Where(t => t.Id == request.TagId &&
+                db.ListMembers.Any(m => m.ListId == request.ListId && m.ProfileId == t.ProfileId))
+            .Select(t => t.Name)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException();
 
         var alreadyApplied = await db.TodoItemTags
             .AnyAsync(t => t.ItemId == request.ItemId && t.TagId == request.TagId, ct);
@@ -35,7 +37,18 @@ public class ApplyTagCommandHandler(AppDbContext db) : IRequestHandler<ApplyTagC
         if (!alreadyApplied)
         {
             db.TodoItemTags.Add(new TodoItemTag { ItemId = request.ItemId, TagId = request.TagId });
+            db.ActivityLogs.Add(new ActivityLog
+            {
+                Id = Guid.NewGuid(),
+                ListId = request.ListId,
+                ActorId = request.ProfileId,
+                ActionType = "TagAdded",
+                Detail = $"\"{tagName}\" on {Truncate(itemContent)}",
+                Timestamp = DateTime.UtcNow
+            });
             await db.SaveChangesAsync(ct);
         }
     }
+
+    private static string Truncate(string s) => s.Length > 80 ? s[..77] + "…" : s;
 }

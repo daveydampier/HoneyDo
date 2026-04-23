@@ -55,6 +55,7 @@ public class UpdateItemCommandHandler(AppDbContext db) : IRequestHandler<UpdateI
         }
 
         var previousStatus = item.StatusId;
+        var previousNotes  = item.Notes;
 
         if (request.Content is not null) item.Content = request.Content;
         if (request.StatusId is not null) item.StatusId = request.StatusId.Value;
@@ -75,6 +76,20 @@ public class UpdateItemCommandHandler(AppDbContext db) : IRequestHandler<UpdateI
                 ActorId = request.ProfileId,
                 ActionType = "StatusChanged",
                 Detail = $"{Truncate(item.Content)} → {StatusName(item.StatusId)}",
+                Timestamp = item.UpdatedAt
+            });
+        }
+
+        // Log a notes change whenever the notes field is provided and its value differs.
+        if (request.Notes is not null && request.Notes != previousNotes)
+        {
+            db.ActivityLogs.Add(new Domain.ActivityLog
+            {
+                Id = Guid.NewGuid(),
+                ListId = request.ListId,
+                ActorId = request.ProfileId,
+                ActionType = "NotesUpdated",
+                Detail = Truncate(item.Content),
                 Timestamp = item.UpdatedAt
             });
         }
