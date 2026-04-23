@@ -159,10 +159,10 @@ C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\staticwebassets.bu
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\staticwebassets.development.json
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\staticwebassets.build.endpoints.json
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\swae.build.ex.cache
-C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\HoneyDo.csproj.Up2Date
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\HoneyDo.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\refint\HoneyDo.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\HoneyDo.pdb
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\HoneyDo.genruntimeconfig.cache
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\ref\HoneyDo.dll
+C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt

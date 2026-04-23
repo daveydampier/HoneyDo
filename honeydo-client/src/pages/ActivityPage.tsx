@@ -9,6 +9,7 @@ import {
 import {
   IconPlus, IconCheck, IconTrash, IconUserPlus,
   IconLock, IconActivity, IconAlertCircle,
+  IconTag, IconNotes,
 } from '@tabler/icons-react'
 
 const ACTION_LABELS: Record<string, string> = {
@@ -17,6 +18,9 @@ const ACTION_LABELS: Record<string, string> = {
   ItemDeleted:   'deleted a task',
   MemberAdded:   'added a member',
   ListClosed:    'closed the list',
+  TagAdded:      'applied a tag',
+  TagRemoved:    'removed a tag',
+  NotesUpdated:  'updated task notes',
 }
 
 const ACTION_ICONS: Record<string, React.ReactNode> = {
@@ -25,6 +29,9 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   ItemDeleted:   <IconTrash size={12} />,
   MemberAdded:   <IconUserPlus size={12} />,
   ListClosed:    <IconLock size={12} />,
+  TagAdded:      <IconTag size={12} />,
+  TagRemoved:    <IconTag size={12} />,
+  NotesUpdated:  <IconNotes size={12} />,
 }
 
 function friendlyAction(actionType: string): string {

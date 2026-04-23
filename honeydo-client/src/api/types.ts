@@ -36,6 +36,7 @@ export interface TodoItem {
   dueDate: string | null
   assignedTo: { id: string; displayName: string } | null
   tags: Tag[]
+  isStarred: boolean
   createdAt: string
   updatedAt: string
 }
