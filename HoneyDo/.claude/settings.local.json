@@ -55,7 +55,8 @@
       "Bash(xargs ls *)",
       "Bash(dir \"C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo\\\\honeydo-client\\\\\" /b | findstr -i \"dockerfile nginx .dockerignore\")",
       "Bash(del \"C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo\\\\HoneyDo.Tests\\\\Integration\\\\DiagnosticTest.cs\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "WebFetch(domain:mantine.dev)"
     ]
   }
 }
