@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { FriendsResult, FriendInfo, ReceivedRequestInfo, SentRequestInfo, SendRequestResult, ApiError } from '../api/types'
 import AvatarCircle from '../components/AvatarCircle'
+import {
+  Container, Group, Title, Text, TextInput, Button,
+  Paper, Stack, Alert, Badge, Loader,
+} from '@mantine/core'
+import { IconAlertCircle, IconCircleCheck } from '@tabler/icons-react'
 
 export default function FriendsPage() {
   const navigate = useNavigate()
@@ -74,110 +79,135 @@ export default function FriendsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '40px auto', padding: '0 16px' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1>Friends</h1>
-        <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: '#666', fontSize: 14, cursor: 'pointer' }}>← Back to lists</button>
-      </header>
+    <Container size="md" pt="xl">
+      <Group justify="space-between" mb="lg">
+        <Title order={1}>Friends</Title>
+        <Button variant="subtle" color="gray" size="xs" onClick={() => navigate('/')}>
+          ← Back to lists
+        </Button>
+      </Group>
 
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Add a Friend</h2>
-        <form onSubmit={handleSendRequest} style={{ display: 'flex', gap: 8 }}>
-          <input
-            style={{ flex: 1 }}
-            type="email"
-            placeholder="Friend's email address…"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-          />
-          <button type="submit">Send Request</button>
+      {/* Add a friend */}
+      <Stack gap="xs" mb="xl">
+        <Text fw={600} size="md">Add a Friend</Text>
+        <form onSubmit={handleSendRequest}>
+          <Group gap="sm">
+            <TextInput
+              flex={1}
+              type="email"
+              placeholder="Friend's email address…"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+            <Button type="submit">Send Request</Button>
+          </Group>
         </form>
-        {sendError && <p style={{ color: 'red', fontSize: 14, marginTop: 8 }}>{sendError}</p>}
-        {sendSuccess && <p style={{ color: 'green', fontSize: 14, marginTop: 8 }}>{sendSuccess}</p>}
-      </section>
+        {sendError && (
+          <Alert color="red" variant="light" icon={<IconAlertCircle size={16} />}>
+            {sendError}
+          </Alert>
+        )}
+        {sendSuccess && (
+          <Alert color="green" variant="light" icon={<IconCircleCheck size={16} />}>
+            {sendSuccess}
+          </Alert>
+        )}
+      </Stack>
 
-      {loading ? <p>Loading…</p> : (
-        <>
+      {loading ? (
+        <Group justify="center" mt="xl"><Loader size="sm" /></Group>
+      ) : (
+        <Stack gap="xl">
+          {/* Pending received */}
           {data.pendingReceived.length > 0 && (
-            <section style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: 16, marginBottom: 12 }}>Pending Requests</h2>
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <section>
+              <Text fw={600} mb="sm">Pending Requests</Text>
+              <Stack gap="sm">
                 {data.pendingReceived.map((req: ReceivedRequestInfo) => (
-                  <li key={req.requesterId} style={{ background: '#fff', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{req.displayName}</div>
-                      <div style={{ fontSize: 13, color: '#666' }}>{req.email}</div>
-                    </div>
-                    <button
-                      onClick={() => handleRespond(req.requesterId, true)}
-                      style={{ fontSize: 13, background: '#0a84ff', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer' }}
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleRespond(req.requesterId, false)}
-                      style={{ fontSize: 13, background: 'none', border: '1px solid #ccc', borderRadius: 4, padding: '4px 10px', cursor: 'pointer' }}
-                    >
-                      Decline
-                    </button>
-                  </li>
+                  <Paper key={req.requesterId} p="sm" radius="md" withBorder>
+                    <Group gap="sm">
+                      <Stack gap={2} flex={1}>
+                        <Text fw={600} size="sm">{req.displayName}</Text>
+                        <Text size="xs" c="dimmed">{req.email}</Text>
+                      </Stack>
+                      <Button size="xs" onClick={() => handleRespond(req.requesterId, true)}>
+                        Accept
+                      </Button>
+                      <Button size="xs" variant="outline" color="gray" onClick={() => handleRespond(req.requesterId, false)}>
+                        Decline
+                      </Button>
+                    </Group>
+                  </Paper>
                 ))}
-              </ul>
+              </Stack>
             </section>
           )}
 
+          {/* Pending sent */}
           {data.pendingSent.length > 0 && (
-            <section style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: 16, marginBottom: 12 }}>Sent Requests</h2>
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <section>
+              <Text fw={600} mb="sm">Sent Requests</Text>
+              <Stack gap="sm">
                 {data.pendingSent.map((req: SentRequestInfo) => (
-                  <li key={req.addresseeId} style={{ background: '#fff', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{req.displayName}</div>
-                      <div style={{ fontSize: 13, color: '#666' }}>{req.email}</div>
-                    </div>
-                    <span style={{ fontSize: 13, color: '#888' }}>Pending</span>
-                    <button
-                      onClick={() => handleCancelRequest(req.addresseeId)}
-                      style={{ fontSize: 13, background: 'none', border: 'none', color: '#c00', cursor: 'pointer' }}
-                    >
-                      Cancel
-                    </button>
-                  </li>
+                  <Paper key={req.addresseeId} p="sm" radius="md" withBorder>
+                    <Group gap="sm">
+                      <Stack gap={2} flex={1}>
+                        <Text fw={600} size="sm">{req.displayName}</Text>
+                        <Text size="xs" c="dimmed">{req.email}</Text>
+                      </Stack>
+                      <Badge color="yellow" variant="light">Pending</Badge>
+                      <Button
+                        variant="subtle"
+                        color="red"
+                        size="xs"
+                        onClick={() => handleCancelRequest(req.addresseeId)}
+                      >
+                        Cancel
+                      </Button>
+                    </Group>
+                  </Paper>
                 ))}
-              </ul>
+              </Stack>
             </section>
           )}
 
+          {/* Friends list */}
           <section>
-            <h2 style={{ fontSize: 16, marginBottom: 12 }}>
-              Friends {data.friends.length > 0 && <span style={{ fontWeight: 400, color: '#666' }}>({data.friends.length})</span>}
-            </h2>
+            <Text fw={600} mb="sm">
+              Friends{' '}
+              {data.friends.length > 0 && (
+                <Text span c="dimmed" fw={400}>({data.friends.length})</Text>
+              )}
+            </Text>
             {data.friends.length === 0 ? (
-              <p style={{ color: '#666' }}>No friends yet. Send a request above.</p>
+              <Text size="sm" c="dimmed">No friends yet. Send a request above.</Text>
             ) : (
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Stack gap="sm">
                 {data.friends.map((friend: FriendInfo) => (
-                  <li key={friend.profileId} style={{ background: '#fff', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <AvatarCircle avatarUrl={friend.avatarUrl} displayName={friend.displayName} size={40} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{friend.displayName}</div>
-                      <div style={{ fontSize: 13, color: '#666' }}>{friend.email}</div>
-                    </div>
-                    <button
-                      onClick={() => handleRemove(friend.profileId, friend.displayName)}
-                      style={{ background: 'none', border: 'none', color: '#c00', fontSize: 13, cursor: 'pointer' }}
-                    >
-                      Remove
-                    </button>
-                  </li>
+                  <Paper key={friend.profileId} p="sm" radius="md" withBorder>
+                    <Group gap="sm">
+                      <AvatarCircle avatarUrl={friend.avatarUrl} displayName={friend.displayName} size={40} />
+                      <Stack gap={2} flex={1}>
+                        <Text fw={600} size="sm">{friend.displayName}</Text>
+                        <Text size="xs" c="dimmed">{friend.email}</Text>
+                      </Stack>
+                      <Button
+                        variant="subtle"
+                        color="red"
+                        size="xs"
+                        onClick={() => handleRemove(friend.profileId, friend.displayName)}
+                      >
+                        Remove
+                      </Button>
+                    </Group>
+                  </Paper>
                 ))}
-              </ul>
+              </Stack>
             )}
           </section>
-        </>
+        </Stack>
       )}
-    </div>
+    </Container>
   )
 }
