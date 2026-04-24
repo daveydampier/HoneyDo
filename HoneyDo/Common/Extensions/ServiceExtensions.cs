@@ -61,11 +61,14 @@ public static class ServiceExtensions
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddValidatorsFromAssemblyContaining<Program>();
         services.AddScoped<JwtService>();
+        services.AddScoped<IActivityLogger, ActivityLogger>();
         return services;
     }
 
     public static IServiceCollection AddEmailService(this IServiceCollection services)
     {
+        // Singleton is safe: SmtpEmailService has no mutable fields.
+        // SmtpClient is created per-call inside SendAsync, not held as a field.
         services.AddSingleton<IEmailService, SmtpEmailService>();
         return services;
     }

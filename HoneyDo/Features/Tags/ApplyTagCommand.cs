@@ -1,4 +1,5 @@
 using HoneyDo.Common.Exceptions;
+using HoneyDo.Common.Services;
 using HoneyDo.Data;
 using HoneyDo.Domain;
 using MediatR;
@@ -8,7 +9,8 @@ namespace HoneyDo.Features.Tags;
 
 public record ApplyTagCommand(Guid ListId, Guid ItemId, Guid TagId, Guid ProfileId) : IRequest;
 
-public class ApplyTagCommandHandler(AppDbContext db) : IRequestHandler<ApplyTagCommand>
+public class ApplyTagCommandHandler(AppDbContext db, IActivityLogger activityLogger)
+    : IRequestHandler<ApplyTagCommand>
 {
     public async Task Handle(ApplyTagCommand request, CancellationToken ct)
     {
@@ -37,18 +39,9 @@ public class ApplyTagCommandHandler(AppDbContext db) : IRequestHandler<ApplyTagC
         if (!alreadyApplied)
         {
             db.TodoItemTags.Add(new TodoItemTag { ItemId = request.ItemId, TagId = request.TagId });
-            db.ActivityLogs.Add(new ActivityLog
-            {
-                Id = Guid.NewGuid(),
-                ListId = request.ListId,
-                ActorId = request.ProfileId,
-                ActionType = "TagAdded",
-                Detail = $"\"{tagName}\" on {Truncate(itemContent)}",
-                Timestamp = DateTime.UtcNow
-            });
+            activityLogger.Log(request.ListId, request.ProfileId, "TagAdded",
+                $"\"{tagName}\" on {ActivityLogger.Truncate(itemContent)}");
             await db.SaveChangesAsync(ct);
         }
     }
-
-    private static string Truncate(string s) => s.Length > 80 ? s[..77] + "…" : s;
 }

@@ -1,5 +1,6 @@
 using FluentValidation;
 using HoneyDo.Common.Exceptions;
+using HoneyDo.Common.Services;
 using HoneyDo.Data;
 using HoneyDo.Domain;
 using MediatR;
@@ -18,7 +19,8 @@ public class AddMemberCommandValidator : AbstractValidator<AddMemberCommand>
     }
 }
 
-public class AddMemberCommandHandler(AppDbContext db) : IRequestHandler<AddMemberCommand, MemberResponse>
+public class AddMemberCommandHandler(AppDbContext db, IActivityLogger activityLogger, ILogger<AddMemberCommandHandler> logger)
+    : IRequestHandler<AddMemberCommand, MemberResponse>
 {
     public async Task<MemberResponse> Handle(AddMemberCommand request, CancellationToken ct)
     {
@@ -43,17 +45,12 @@ public class AddMemberCommandHandler(AppDbContext db) : IRequestHandler<AddMembe
         var member = new ListMember { ListId = request.ListId, ProfileId = invitee.Id, Role = request.Role, JoinedAt = now };
         db.ListMembers.Add(member);
 
-        db.ActivityLogs.Add(new ActivityLog
-        {
-            Id = Guid.NewGuid(),
-            ListId = request.ListId,
-            ActorId = request.ActorId,
-            ActionType = "MemberAdded",
-            Detail = invitee.DisplayName,
-            Timestamp = now
-        });
+        activityLogger.Log(request.ListId, request.ActorId, "MemberAdded", invitee.DisplayName, now);
 
         await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Profile {InviteeId} added to list {ListId} as {Role} by {ActorId}",
+            invitee.Id, request.ListId, request.Role, request.ActorId);
 
         return new MemberResponse(invitee.Id, invitee.DisplayName, invitee.AvatarUrl, request.Role, now);
     }

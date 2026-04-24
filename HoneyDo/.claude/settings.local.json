@@ -69,7 +69,8 @@
       "Bash(find HoneyDo.Tests/Integration -type f -name \"*.cs\" -exec wc -l {} +)",
       "Bash(./.githooks/pre-commit)",
       "WebFetch(domain:github.com)",
-      "Bash(dotnet restore *)"
+      "Bash(dotnet restore *)",
+      "Bash(npm test *)"
     ]
   }
 }

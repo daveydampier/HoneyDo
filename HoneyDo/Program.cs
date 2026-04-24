@@ -24,11 +24,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply any pending EF migrations automatically on startup (relational only — not in-memory test DB).
+// Apply pending EF migrations automatically on startup when MigrateOnStartup is true.
+// Enabled via appsettings.Development.json for local development. Production deployments
+// should run migrations as a dedicated pre-deploy step to avoid race conditions when
+// starting multiple replicas against a shared database.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (db.Database.IsRelational())
+    if (db.Database.IsRelational() && app.Configuration.GetValue<bool>("MigrateOnStartup"))
         db.Database.Migrate();
 }
 
@@ -48,4 +51,6 @@ app.MapControllers();
 
 app.Run();
 
+// Exposes Program as a partial class so HoneyDo.Tests can reference it via
+// WebApplicationFactory<Program>. This is intentional — not dead code.
 public partial class Program { }
