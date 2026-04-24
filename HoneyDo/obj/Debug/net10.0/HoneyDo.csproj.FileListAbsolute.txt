@@ -165,4 +165,3 @@ C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\refint\HoneyDo.dll
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\HoneyDo.pdb
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\HoneyDo.genruntimeconfig.cache
 C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\ref\HoneyDo.dll
-C:\Users\davey\source\repos\HoneyDo\HoneyDo\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
