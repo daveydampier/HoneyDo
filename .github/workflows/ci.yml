@@ -25,6 +25,9 @@ jobs:
       - name: Restore
         run: dotnet restore HoneyDo.Tests/HoneyDo.Tests.csproj
 
+      # GenerateApiSpec is not set, so OpenApiGenerateDocuments stays false —
+      # spec generation is opt-in and requires Jwt:Key in the environment.
+      # Developers regenerate locally: dotnet build /p:GenerateApiSpec=true
       - name: Build
         run: dotnet build HoneyDo.Tests/HoneyDo.Tests.csproj --configuration Release --no-restore
 
@@ -52,8 +55,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: honeydo-client/package-lock.json
 
+      # --legacy-peer-deps: openapi-typescript declares peer "typescript@^5.x" but
+      # the project uses TypeScript 6. The package works fine with TS 6; the peer
+      # dep declaration just hasn't been updated upstream yet.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       # Fails on high/critical vulnerabilities. Run after install so the
       # lockfile is authoritative. Use --audit-level=high to avoid noise
