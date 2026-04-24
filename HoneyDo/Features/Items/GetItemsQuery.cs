@@ -2,6 +2,7 @@ using FluentValidation;
 using HoneyDo.Common.Exceptions;
 using HoneyDo.Common.Models;
 using HoneyDo.Data;
+using HoneyDo.Domain;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,11 +49,11 @@ public class GetItemsQueryHandler(AppDbContext db) : IRequestHandler<GetItemsQue
             query = query.Where(i => request.StatusIds.Contains(i.StatusId));
 
         // Priority groups applied before the user-selected sort:
-        //   1. Active tasks (statusId 1 or 2) before resolved (Complete=3 / Abandoned=4)
+        //   1. Active tasks (NotStarted/Partial) before resolved (Complete/Abandoned)
         //   2. Starred tasks before unstarred (within each group)
         //   3. User-selected sort (DueDate / Content / CreatedAt, asc/desc)
         var prioritised = query
-            .OrderBy(i => i.StatusId == 3 || i.StatusId == 4 ? 1 : 0)
+            .OrderBy(i => i.StatusId == (int)ItemStatus.Complete || i.StatusId == (int)ItemStatus.Abandoned ? 1 : 0)
             .ThenBy(i => i.IsStarred ? 0 : 1);
 
         query = (request.SortBy, request.Ascending) switch

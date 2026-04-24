@@ -1,5 +1,6 @@
 using FluentValidation;
 using HoneyDo.Common.Exceptions;
+using HoneyDo.Common.Services;
 using HoneyDo.Data;
 using HoneyDo.Domain;
 using MediatR;
@@ -9,7 +10,8 @@ namespace HoneyDo.Features.Lists;
 
 public record CloseListCommand(Guid ListId, Guid ProfileId) : IRequest<TodoListResponse>;
 
-public class CloseListCommandHandler(AppDbContext db) : IRequestHandler<CloseListCommand, TodoListResponse>
+public class CloseListCommandHandler(AppDbContext db, IActivityLogger activityLogger)
+    : IRequestHandler<CloseListCommand, TodoListResponse>
 {
     public async Task<TodoListResponse> Handle(CloseListCommand request, CancellationToken ct)
     {
@@ -32,23 +34,15 @@ public class CloseListCommandHandler(AppDbContext db) : IRequestHandler<CloseLis
         if (items.Count == 0)
             throw new ValidationException([new FluentValidation.Results.ValidationFailure("ListId", "Cannot close a list with no tasks.")]);
 
-        // Status 1 = Not Started; all other statuses (Partial, Complete, Abandoned) allow closing.
-        var hasOpenItems = items.Any(s => s == 1);
+        var hasOpenItems = items.Any(s => s == (int)ItemStatus.NotStarted);
         if (hasOpenItems)
             throw new ValidationException([new FluentValidation.Results.ValidationFailure("ListId", "All tasks must be Partial, Complete, or Abandoned before closing.")]);
 
         var now = DateTime.UtcNow;
-        membership.List.ClosedAt = now;
+        membership.List.ClosedAt  = now;
         membership.List.UpdatedAt = now;
 
-        db.ActivityLogs.Add(new ActivityLog
-        {
-            Id = Guid.NewGuid(),
-            ListId = request.ListId,
-            ActorId = request.ProfileId,
-            ActionType = "ListClosed",
-            Timestamp = now
-        });
+        activityLogger.Log(request.ListId, request.ProfileId, "ListClosed", timestamp: now);
 
         await db.SaveChangesAsync(ct);
 
@@ -57,7 +51,7 @@ public class CloseListCommandHandler(AppDbContext db) : IRequestHandler<CloseLis
             .Select(m => new { m.Role, m.Profile.DisplayName })
             .ToListAsync(ct);
 
-        var ownerName = memberNames.FirstOrDefault(m => m.Role == MemberRole.Owner)?.DisplayName ?? "Unknown";
+        var ownerName        = memberNames.FirstOrDefault(m => m.Role == MemberRole.Owner)?.DisplayName ?? "Unknown";
         var contributorNames = memberNames.Where(m => m.Role == MemberRole.Contributor).Select(m => m.DisplayName).ToList();
 
         return new TodoListResponse(
@@ -67,10 +61,10 @@ public class CloseListCommandHandler(AppDbContext db) : IRequestHandler<CloseLis
             ownerName,
             contributorNames,
             memberNames.Count,
-            items.Count(s => s == 1),
-            items.Count(s => s == 2),
-            items.Count(s => s == 3),
-            items.Count(s => s == 4),
+            items.Count(s => s == (int)ItemStatus.NotStarted),
+            items.Count(s => s == (int)ItemStatus.Partial),
+            items.Count(s => s == (int)ItemStatus.Complete),
+            items.Count(s => s == (int)ItemStatus.Abandoned),
             membership.List.CreatedAt,
             membership.List.UpdatedAt,
             membership.List.ClosedAt,

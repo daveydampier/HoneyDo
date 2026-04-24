@@ -1,3 +1,5 @@
+import { authStorage } from './authStorage'
+
 const BASE_URL = '/api'
 
 /**
@@ -28,12 +30,8 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler
 }
 
-function getToken() {
-  return localStorage.getItem('token')
-}
-
 function authHeader(): HeadersInit {
-  const token = getToken()
+  const token = authStorage.getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -41,7 +39,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     // Fire the global 401 hook *only* if we actually sent a token — otherwise
     // unauthenticated flows (login/register) would redirect themselves in circles.
-    if (res.status === 401 && getToken()) {
+    if (res.status === 401 && authStorage.getToken()) {
       onUnauthorized?.()
     }
     const body = await res.json().catch(() => ({ title: 'An error occurred' }))

@@ -1,4 +1,5 @@
 using HoneyDo.Common.Exceptions;
+using HoneyDo.Common.Services;
 using HoneyDo.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,8 @@ namespace HoneyDo.Features.Items;
 
 public record DeleteItemCommand(Guid ListId, Guid ItemId, Guid ProfileId) : IRequest;
 
-public class DeleteItemCommandHandler(AppDbContext db) : IRequestHandler<DeleteItemCommand>
+public class DeleteItemCommandHandler(AppDbContext db, IActivityLogger activityLogger)
+    : IRequestHandler<DeleteItemCommand>
 {
     public async Task Handle(DeleteItemCommand request, CancellationToken ct)
     {
@@ -22,15 +24,8 @@ public class DeleteItemCommandHandler(AppDbContext db) : IRequestHandler<DeleteI
 
         item.DeletedAt = DateTime.UtcNow;
 
-        db.ActivityLogs.Add(new Domain.ActivityLog
-        {
-            Id = Guid.NewGuid(),
-            ListId = request.ListId,
-            ActorId = request.ProfileId,
-            ActionType = "ItemDeleted",
-            Detail = item.Content.Length > 100 ? item.Content[..97] + "…" : item.Content,
-            Timestamp = item.DeletedAt.Value
-        });
+        activityLogger.Log(request.ListId, request.ProfileId, "ItemDeleted",
+            ActivityLogger.Truncate(item.Content), item.DeletedAt.Value);
 
         await db.SaveChangesAsync(ct);
     }

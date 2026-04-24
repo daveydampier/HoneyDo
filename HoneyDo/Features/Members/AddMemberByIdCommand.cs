@@ -1,5 +1,6 @@
 using FluentValidation;
 using HoneyDo.Common.Exceptions;
+using HoneyDo.Common.Services;
 using HoneyDo.Data;
 using HoneyDo.Domain;
 using MediatR;
@@ -9,7 +10,8 @@ namespace HoneyDo.Features.Members;
 
 public record AddMemberByIdCommand(Guid ListId, Guid ActorId, Guid ProfileId) : IRequest<MemberResponse>;
 
-public class AddMemberByIdCommandHandler(AppDbContext db) : IRequestHandler<AddMemberByIdCommand, MemberResponse>
+public class AddMemberByIdCommandHandler(AppDbContext db, IActivityLogger activityLogger)
+    : IRequestHandler<AddMemberByIdCommand, MemberResponse>
 {
     public async Task<MemberResponse> Handle(AddMemberByIdCommand request, CancellationToken ct)
     {
@@ -33,22 +35,14 @@ public class AddMemberByIdCommandHandler(AppDbContext db) : IRequestHandler<AddM
         var now = DateTime.UtcNow;
         var member = new ListMember
         {
-            ListId = request.ListId,
+            ListId    = request.ListId,
             ProfileId = invitee.Id,
-            Role = MemberRole.Contributor,
-            JoinedAt = now
+            Role      = MemberRole.Contributor,
+            JoinedAt  = now
         };
         db.ListMembers.Add(member);
 
-        db.ActivityLogs.Add(new ActivityLog
-        {
-            Id = Guid.NewGuid(),
-            ListId = request.ListId,
-            ActorId = request.ActorId,
-            ActionType = "MemberAdded",
-            Detail = invitee.DisplayName,
-            Timestamp = now
-        });
+        activityLogger.Log(request.ListId, request.ActorId, "MemberAdded", invitee.DisplayName, now);
 
         await db.SaveChangesAsync(ct);
 

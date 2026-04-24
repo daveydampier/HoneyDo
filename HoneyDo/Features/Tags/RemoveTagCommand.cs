@@ -1,4 +1,5 @@
 using HoneyDo.Common.Exceptions;
+using HoneyDo.Common.Services;
 using HoneyDo.Data;
 using HoneyDo.Domain;
 using MediatR;
@@ -8,7 +9,8 @@ namespace HoneyDo.Features.Tags;
 
 public record RemoveTagCommand(Guid ListId, Guid ItemId, Guid TagId, Guid ProfileId) : IRequest;
 
-public class RemoveTagCommandHandler(AppDbContext db) : IRequestHandler<RemoveTagCommand>
+public class RemoveTagCommandHandler(AppDbContext db, IActivityLogger activityLogger)
+    : IRequestHandler<RemoveTagCommand>
 {
     public async Task Handle(RemoveTagCommand request, CancellationToken ct)
     {
@@ -35,17 +37,8 @@ public class RemoveTagCommandHandler(AppDbContext db) : IRequestHandler<RemoveTa
             ?? throw new NotFoundException();
 
         db.TodoItemTags.Remove(itemTag);
-        db.ActivityLogs.Add(new ActivityLog
-        {
-            Id = Guid.NewGuid(),
-            ListId = request.ListId,
-            ActorId = request.ProfileId,
-            ActionType = "TagRemoved",
-            Detail = $"\"{tagName}\" from {Truncate(itemContent)}",
-            Timestamp = DateTime.UtcNow
-        });
+        activityLogger.Log(request.ListId, request.ProfileId, "TagRemoved",
+            $"\"{tagName}\" from {ActivityLogger.Truncate(itemContent)}");
         await db.SaveChangesAsync(ct);
     }
-
-    private static string Truncate(string s) => s.Length > 80 ? s[..77] + "…" : s;
 }

@@ -1,46 +1,56 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { api, setUnauthorizedHandler } from '../api/client'
+import { authStorage } from '../api/authStorage'
 import type { AuthResponse } from '../api/types'
 
 interface AuthContextValue {
-  token: string | null
-  profileId: string | null
+  token:       string | null
+  profileId:   string | null
   displayName: string | null
-  login: (email: string, password: string) => Promise<void>
+  isLoading:   boolean
+  login:    (email: string, password: string) => Promise<void>
   register: (email: string, password: string, displayName: string) => Promise<void>
-  logout: () => void
+  logout:   () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
-  const [profileId, setProfileId] = useState<string | null>(() => localStorage.getItem('profileId'))
-  const [displayName, setDisplayName] = useState<string | null>(() => localStorage.getItem('displayName'))
+  const initial = authStorage.load()
+  const [token,       setToken]       = useState<string | null>(initial.token)
+  const [profileId,   setProfileId]   = useState<string | null>(initial.profileId)
+  const [displayName, setDisplayName] = useState<string | null>(initial.displayName)
+  const [isLoading,   setIsLoading]   = useState(false)
 
   const persist = useCallback((res: AuthResponse) => {
-    localStorage.setItem('token', res.token)
-    localStorage.setItem('profileId', res.profileId)
-    localStorage.setItem('displayName', res.displayName)
+    authStorage.save(res)
     setToken(res.token)
     setProfileId(res.profileId)
     setDisplayName(res.displayName)
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await api.post<AuthResponse>('/auth/login', { email, password })
-    persist(res)
+    setIsLoading(true)
+    try {
+      const res = await api.post<AuthResponse>('/auth/login', { email, password })
+      persist(res)
+    } finally {
+      setIsLoading(false)
+    }
   }, [persist])
 
   const register = useCallback(async (email: string, password: string, displayName: string) => {
-    const res = await api.post<AuthResponse>('/auth/register', { email, password, displayName })
-    persist(res)
+    setIsLoading(true)
+    try {
+      const res = await api.post<AuthResponse>('/auth/register', { email, password, displayName })
+      persist(res)
+    } finally {
+      setIsLoading(false)
+    }
   }, [persist])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('profileId')
-    localStorage.removeItem('displayName')
+    authStorage.clear()
     setToken(null)
     setProfileId(null)
     setDisplayName(null)
@@ -54,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [logout])
 
   return (
-    <AuthContext.Provider value={{ token, profileId, displayName, login, register, logout }}>
+    <AuthContext.Provider value={{ token, profileId, displayName, isLoading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )
