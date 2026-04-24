@@ -31,6 +31,11 @@ jobs:
       - name: Test
         run: dotnet test HoneyDo.Tests/HoneyDo.Tests.csproj --configuration Release --no-build --verbosity normal --logger "console;verbosity=detailed"
 
+      # Fails the build if any direct or transitive NuGet package has a known
+      # vulnerability. Requires network access to the NuGet vulnerability DB.
+      - name: Vulnerability scan (NuGet)
+        run: dotnet list HoneyDo.Tests/HoneyDo.Tests.csproj package --vulnerable --include-transitive
+
   frontend:
     name: Frontend (tsc + vite build)
     runs-on: ubuntu-latest
@@ -49,6 +54,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Fails on high/critical vulnerabilities. Run after install so the
+      # lockfile is authoritative. Use --audit-level=high to avoid noise
+      # from low/moderate issues in dev-only tooling.
+      - name: Vulnerability scan (npm)
+        run: npm audit --audit-level=high
 
       - name: Test
         run: npm test

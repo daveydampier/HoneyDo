@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Keep GitHub Actions versions current
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # NuGet packages for the backend
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # npm packages for the frontend
+  - package-ecosystem: "npm"
+    directory: "/honeydo-client"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
