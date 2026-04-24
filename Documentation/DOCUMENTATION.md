@@ -15,6 +15,7 @@
 11. [Frontend Reference](#11-frontend-reference)
 12. [Testing Strategy](#12-testing-strategy)
 13. [CI Pipeline](#13-ci-pipeline)
+14. [Known Tradeoffs](#14-known-tradeoffs)
 
 ---
 
@@ -896,3 +897,41 @@ git config core.hooksPath .githooks
 - GitHub Actions (pinned action versions)
 - NuGet packages
 - npm packages (scoped to `honeydo-client/`)
+
+---
+
+## 14. Known Tradeoffs
+
+These are deliberate decisions made during development where a simpler or faster path was chosen over the production-optimal one. They are documented here so the reasoning is explicit rather than implicit.
+
+### SQLite over PostgreSQL
+
+SQLite makes the getting-started experience frictionless — one file, zero infrastructure, migrations apply automatically on startup. The tradeoff is that SQLite uses file-level write locks, so concurrent writes serialise and throughput collapses under meaningful load. Switching to PostgreSQL is a configuration-level change (the EF Core provider and connection string); the migration history and application code are unaffected. This is the first change to make before any serious production deployment.
+
+### Due Dates Stored as TEXT
+
+`TodoItem.DueDate` is a nullable `TEXT` column storing dates in `YYYY-MM-DD` format rather than a `DateTime` or `DateOnly`. This was chosen because due dates are calendar dates with no time or timezone component, `YYYY-MM-DD` strings sort and compare correctly as text, and the value maps directly to and from the HTML `<input type="date">` without any conversion. The tradeoff is that SQL-level date arithmetic is limited — a query like "items due in the next 7 days" requires application-side filtering rather than a simple `WHERE` clause.
+
+### No Optimistic Concurrency
+
+Update handlers do not use EF Core's concurrency token mechanism (`[ConcurrencyToken]` / `rowversion`). A lost-update is possible if two members simultaneously fetch and patch the same task. In practice the collision surface is narrow — concurrent inserts don't conflict, and two members editing the same task at the same instant is an edge case for a household todo list. The right production fix is a `rowversion` column, a `HasRowVersion()` call in the DbContext, and a `DbUpdateConcurrencyException` catch in update handlers that returns a 409. Deferred in exchange for simpler handler code.
+
+### Stateless JWTs with No Revocation
+
+Tokens issued on login remain valid until their expiry window closes regardless of logout. A user who logs out still holds a token that the API will accept for up to 24 hours. The production answer is short-lived access tokens paired with refresh tokens and a server-side revocation table (backed by Redis). Not implemented here for scope reasons; the 24-hour expiry window is an acceptable risk at this stage.
+
+### Monorepo with a Single CI Pipeline
+
+The frontend and backend share one repository and one CI pipeline. This simplifies the getting-started experience and ensures integration issues surface immediately. The tradeoff is deployment independence — a frontend copy fix triggers a full backend build and test run, and independent teams cannot deploy on separate cadences. At production scale these would be separate pipelines with independently versioned artifacts.
+
+### TimeProvider Not Injected
+
+Handlers call `DateTime.UtcNow` directly rather than using .NET 8's `System.TimeProvider`. This means time-dependent logic (token expiry, `ClosedAt` timestamps, activity log ordering) cannot be controlled in tests. No current test requires time-sensitive assertions, so there is no immediate pain. It is latent testability debt — the fix is registering `TimeProvider.System` in DI, injecting it into handlers, and using `FakeTimeProvider` in the test factory. Worth implementing when the first time-sensitive test assertion is needed.
+
+### No Real-Time Push
+
+The application uses a request/response model throughout. Members editing the same list do not see each other's changes until they refresh the page. For a household todo list this is an acceptable UX gap. For a true collaborative tool it would be a significant limitation — the fix is WebSockets or SignalR broadcasting mutations to subscribed clients. Deferred as out of scope for the current feature set.
+
+### TanStack Query Not Used
+
+Data fetching is implemented with hand-rolled `useEffect` + `useState` + loading/error state. There is no client-side cache: navigating away from a page and back always triggers a fresh network fetch. Optimistic updates are implemented correctly but are not rolled back on failure. TanStack Query would eliminate all of this boilerplate and add caching, background refetch, and proper rollback. It was deferred because migrating the existing pages — particularly `ListDetailPage` with its many interdependent mutations — is a full sprint of work with meaningful regression risk. The current implementation is correct; the missing piece is efficiency and resilience.
