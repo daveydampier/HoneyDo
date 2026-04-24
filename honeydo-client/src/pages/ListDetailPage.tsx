@@ -203,7 +203,7 @@ export default function ListDetailPage() {
         // Attach tag objects to the new item for immediate display
         item.tags = myTags.filter(t => createTagIds.has(t.id))
       }
-      setItems(prev => [item, ...prev])
+      setItems(prev => sortItems([item, ...prev], sortBy, ascending))
       setContent('')
       setDueDate('')
       setCreateTagIds(new Set())
