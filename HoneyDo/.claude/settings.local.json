@@ -78,7 +78,9 @@
       "Bash(npx openapi-typescript *)",
       "Bash(sed -n '210,225p' /c/Users/davey/source/repos/HoneyDo/honeydo-client/src/pages/ListDetailPage.tsx)",
       "Bash(sed -n '680,730p' /c/Users/davey/source/repos/HoneyDo/honeydo-client/src/pages/ListDetailPage.tsx)",
-      "Bash(git -C /c/Users/davey/source/repos/HoneyDo diff --cached HoneyDo/HoneyDo.csproj)"
+      "Bash(git -C /c/Users/davey/source/repos/HoneyDo diff --cached HoneyDo/HoneyDo.csproj)",
+      "Bash(find C:/Users/davey/source/repos/HoneyDo/honeydo-client/src/api -name \"authStorage*\" -exec cat {} \\\\;)",
+      "Bash(npx playwright *)"
     ]
   }
 }
