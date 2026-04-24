@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback } from 'react'
-import { api } from '../api/client'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { api, setUnauthorizedHandler } from '../api/client'
 import type { AuthResponse } from '../api/types'
 
 interface AuthContextValue {
@@ -45,6 +45,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfileId(null)
     setDisplayName(null)
   }, [])
+
+  // On any 401 response the api client fires this hook. Clearing the token
+  // causes PrivateRoutes to redirect to /login on the next render.
+  useEffect(() => {
+    setUnauthorizedHandler(logout)
+    return () => setUnauthorizedHandler(null)
+  }, [logout])
 
   return (
     <AuthContext.Provider value={{ token, profileId, displayName, login, register, logout }}>

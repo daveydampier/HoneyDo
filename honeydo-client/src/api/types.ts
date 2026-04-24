@@ -116,8 +116,6 @@ export interface ActivityLogEntry {
   timestamp: string
 }
 
-export interface ApiError {
-  status: number
-  title: string
-  errors?: Record<string, string[]>
-}
+// Re-exported so existing `import type { ApiError } from '../api/types'` keeps working.
+// The runtime class lives in ./client and extends Error.
+export type { ApiError } from './client'

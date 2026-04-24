@@ -23,7 +23,18 @@ public static class ServiceExtensions
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration config)
     {
         var jwtSection = config.GetSection("Jwt");
-        var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
+
+        var keyString = jwtSection["Key"]
+            ?? throw new InvalidOperationException(
+                "Jwt:Key is not configured. Set it via environment variable (Jwt__Key=<secret>) " +
+                "or .NET User Secrets. See DOCUMENTATION.md §7.1.");
+
+        // HMAC-SHA256 requires a 256-bit (32-byte) key at minimum.
+        if (Encoding.UTF8.GetByteCount(keyString) < 32)
+            throw new InvalidOperationException(
+                "Jwt:Key must be at least 32 bytes (256 bits) for HMAC-SHA256 signing.");
+
+        var key = Encoding.UTF8.GetBytes(keyString);
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
