@@ -67,7 +67,9 @@
       "Bash(cd /tmp)",
       "Read(//mnt/c/Users/davey/source/repos/HoneyDo/HoneyDo.Tests/**)",
       "Bash(find HoneyDo.Tests/Integration -type f -name \"*.cs\" -exec wc -l {} +)",
-      "Bash(./.githooks/pre-commit)"
+      "Bash(./.githooks/pre-commit)",
+      "WebFetch(domain:github.com)",
+      "Bash(dotnet restore *)"
     ]
   }
 }
