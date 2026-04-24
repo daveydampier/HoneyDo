@@ -5,7 +5,10 @@ WORKDIR /app
 
 # Install dependencies first (separate layer — only re-runs when package files change)
 COPY package*.json ./
-RUN npm ci --silent
+# --legacy-peer-deps: openapi-typescript declares peer "typescript@^5.x" but
+# the project uses TypeScript 6. The package works fine; the peer dep
+# declaration just hasn't been updated upstream yet.
+RUN npm ci --silent --legacy-peer-deps
 
 # Copy source and build the production bundle
 COPY . .
