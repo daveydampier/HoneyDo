@@ -17,6 +17,13 @@ dist/
 *.db-shm
 *.db-wal
 
+# ── Claude Code ────────────────────────────────────────────────────────────
+.claude/settings.local.json
+
+# ── Playwright ──────────────────────────────────────────────────────────────
+honeydo-client/test-results/
+honeydo-client/playwright-report/
+
 # ── OS ─────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
