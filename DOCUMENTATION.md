@@ -628,6 +628,16 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
 - Leave `Email:Smtp:Host` empty for development — the full email body (including invite links) will be logged to the API console instead of sent
 - Set `AppUrl` to the frontend's base URL so that invite links in emails point to the correct host
 
+### First-Time Clone Setup
+
+After cloning the repository, run this once to enable the pre-commit hook that runs the test suite before every commit:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This wires up `.githooks/pre-commit`, which runs `dotnet test` automatically before git records each commit. If any test fails the commit is aborted and the failure is shown — fix it, then commit again. Skipping this step means the hook will not run and broken code can reach the repo.
+
 ### Running Locally
 
 ```bash

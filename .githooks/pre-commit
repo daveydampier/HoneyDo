@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# Pre-commit hook: runs the HoneyDo integration test suite before every commit.
+# If any test fails the commit is aborted so broken code never reaches the repo.
+#
+# To enable this hook (one-time setup per clone):
+#   git config core.hooksPath .githooks
+
+echo ""
+echo "==> Running tests before commit..."
+echo ""
+
+dotnet test "HoneyDo.Tests/HoneyDo.Tests.csproj" \
+    --verbosity quiet \
+    --logger "console;verbosity=minimal"
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "==> Tests FAILED — commit aborted."
+    echo "    Fix the failures above, then commit again."
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo "==> All tests passed. Proceeding with commit."
+echo ""
+exit 0
