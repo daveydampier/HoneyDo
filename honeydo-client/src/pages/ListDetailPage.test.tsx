@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
+import { axe } from 'jest-axe'
 import { server } from '../test/server'
 import { renderWithProviders } from '../test/renderWithProviders'
 import { makeList, makeItem, makePagedResult } from '../test/fixtures'
@@ -115,5 +116,22 @@ describe('ListDetailPage', () => {
     await waitFor(() =>
       expect(screen.queryByText('Task to remove')).not.toBeInTheDocument()
     )
+  })
+
+  it('has no axe violations once the list is loaded', async () => {
+    server.use(
+      http.get('/api/lists/:listId', () =>
+        HttpResponse.json(makeList({ title: 'Accessibility Test List' }))
+      ),
+      http.get('/api/lists/:listId/items', () =>
+        HttpResponse.json(makePagedResult([makeItem({ content: 'Check the ramp' })]))
+      ),
+    )
+
+    const { container } = renderDetailPage()
+    // Wait for async data to settle before running axe
+    await waitFor(() => screen.getByText('Accessibility Test List'))
+    await waitFor(() => screen.getByText('Check the ramp'))
+    expect(await axe(container)).toHaveNoViolations()
   })
 })

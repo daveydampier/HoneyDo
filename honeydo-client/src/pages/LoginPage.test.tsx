@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
+import { axe } from 'jest-axe'
 import { server } from '../test/server'
 import { renderWithProviders } from '../test/renderWithProviders'
 import LoginPage from './LoginPage'
@@ -82,5 +83,10 @@ describe('LoginPage', () => {
     await waitFor(() =>
       expect(screen.getByText('Service unavailable')).toBeInTheDocument()
     )
+  })
+
+  it('has no axe violations on initial render', async () => {
+    const { container } = renderLogin()
+    expect(await axe(container)).toHaveNoViolations()
   })
 })

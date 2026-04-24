@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import { toHaveNoViolations } from 'jest-axe'
 import { server } from './server'
+
+// Extend Vitest's expect with the jest-axe matcher.
+expect.extend(toHaveNoViolations)
 
 // jsdom doesn't implement window.matchMedia. Mantine's MantineProvider calls it
 // on mount to detect the OS color scheme. Stub it out so all tests can render

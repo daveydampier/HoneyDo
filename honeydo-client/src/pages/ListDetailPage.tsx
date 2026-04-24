@@ -476,6 +476,7 @@ export default function ListDetailPage() {
               />
               <input
                 type="date"
+                aria-label="Due date"
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
                 style={{
@@ -596,6 +597,7 @@ export default function ListDetailPage() {
                     <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>Due date</Text>
                     <input
                       type="date"
+                      aria-label="Due date"
                       value={editDueDate}
                       onChange={e => setEditDueDate(e.target.value)}
                       style={{

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { axe } from 'jest-axe'
 import { server } from '../test/server'
 import { renderWithProviders } from '../test/renderWithProviders'
 import { makeList } from '../test/fixtures'
@@ -110,5 +111,12 @@ describe('ListsPage', () => {
     await waitFor(() =>
       expect(screen.getByText('Failed to load lists.')).toBeInTheDocument()
     )
+  })
+
+  it('has no axe violations once lists are loaded', async () => {
+    const { container } = renderListsPage()
+    // Wait for the page to finish loading before running axe (default fixture title)
+    await waitFor(() => screen.getByText('Groceries'))
+    expect(await axe(container)).toHaveNoViolations()
   })
 })
