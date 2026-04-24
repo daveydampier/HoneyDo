@@ -11,18 +11,22 @@ jobs:
     name: Backend (dotnet test)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
+      # Target the test project directly — it references HoneyDo.csproj transitively,
+      # so this covers the whole backend. Avoids HoneyDo.slnx, which registers the
+      # frontend folder as a legacy "Website" project that only builds on Windows
+      # .NET Framework MSBuild.
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore HoneyDo.Tests/HoneyDo.Tests.csproj
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build HoneyDo.Tests/HoneyDo.Tests.csproj --configuration Release --no-restore
 
       - name: Test
         run: dotnet test HoneyDo.Tests/HoneyDo.Tests.csproj --configuration Release --no-build --verbosity normal --logger "console;verbosity=detailed"
@@ -34,10 +38,10 @@ jobs:
       run:
         working-directory: honeydo-client
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'npm'
