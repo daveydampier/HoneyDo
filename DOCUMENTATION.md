@@ -314,7 +314,10 @@ JWT tokens are issued on register and login. All endpoints except `/api/auth/reg
 - `Jwt:ExpiryHours` — Token lifetime (default: 24 hours)
 - `ClockSkew: TimeSpan.Zero` — No leeway on token expiry; tokens expire exactly when they say
 
-**Production key setup:** `appsettings.json` ships with a clearly-labelled placeholder value (`DEV_ONLY_REPLACE_VIA_ENV_OR_USER_SECRETS_IN_PRODUCTION`). Before deploying, override `Jwt:Key` via an environment variable (`Jwt__Key=<secret>`) or .NET User Secrets — never commit a real secret to source control.
+**Key setup:** `appsettings.json` deliberately ships with no `Jwt:Key` value — the app fails fast on startup if the key is missing or shorter than 32 bytes, so production deployments cannot accidentally run with a default secret.
+
+- **Development:** `appsettings.Development.json` contains a clearly-labelled dev-only key so `dotnet run` works out of the box. This file is checked in but the key it holds is never used in production (the Development environment is never active there).
+- **Production:** Supply `Jwt:Key` via an environment variable (`Jwt__Key=<secret>`) or .NET User Secrets. Never commit a real secret to source control. Minimum 32 bytes (256 bits) for HMAC-SHA256.
 
 ### 7.2 Password Hashing
 
@@ -597,11 +600,12 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
     "DefaultConnection": "Data Source=honeydo.db"
   },
   "Jwt": {
-    "Key": "<secret — minimum 32 characters>",
     "Issuer": "HoneyDo",
     "Audience": "HoneyDo",
     "ExpiryHours": "24"
   },
+  // Jwt:Key must come from appsettings.Development.json (dev) or
+  // environment variable / user-secrets (prod). Never committed here.
   "AppUrl": "http://localhost:5173",
   "AllowedOrigins": "http://localhost:5173",
   "Email": {
