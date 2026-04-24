@@ -13,6 +13,8 @@
 9. [Complete CRUD Operation Reference](#9-complete-crud-operation-reference)
 10. [Configuration Reference](#10-configuration-reference)
 11. [Frontend Reference](#11-frontend-reference)
+12. [Testing Strategy](#12-testing-strategy)
+13. [CI Pipeline](#13-ci-pipeline)
 
 ---
 
@@ -30,9 +32,13 @@ HoneyDo is a collaborative to-do list application with a React frontend and an A
 | Auth | JWT Bearer tokens |
 | Password hashing | BCrypt.Net |
 | Email | MailKit (SMTP with dev console fallback) |
-| Testing | xUnit + WebApplicationFactory + EF InMemory |
+| Backend testing | xUnit + WebApplicationFactory + EF InMemory |
 | Frontend | React + TypeScript (Vite) |
-| Frontend UI | Mantine UI v7 + Tabler Icons |
+| Frontend UI | Mantine v9 + Tabler Icons |
+| Frontend unit/integration tests | Vitest + Testing Library + MSW + jest-axe |
+| Frontend E2E tests | Playwright (Chromium) |
+| API types | openapi-typescript (generated from OpenAPI 3.1 spec) |
+| Dependency updates | Dependabot (weekly, github-actions / nuget / npm) |
 
 ---
 
@@ -659,6 +665,38 @@ npm run dev
 
 The Vite dev server proxies all `/api/*` requests to `http://localhost:5277`, so the frontend always uses relative `/api/...` paths.
 
+### Running Tests
+
+```bash
+# Backend unit + integration tests
+dotnet test HoneyDo.Tests/HoneyDo.Tests.csproj
+
+# Frontend unit + integration tests (Vitest)
+cd honeydo-client && npm test
+
+# Frontend E2E tests (Playwright — requires the Vite dev server to be running,
+# or Playwright will start it automatically)
+cd honeydo-client && npm run test:e2e
+```
+
+### Regenerating TypeScript API Types
+
+The frontend types in `src/api/generated.ts` are auto-generated from the OpenAPI spec (`honeydo-client/HoneyDo.json`). Regenerate whenever backend DTOs or endpoints change:
+
+```bash
+# Step 1: Regenerate the OpenAPI spec from the running backend
+#   Requires the Jwt:Key to be set (it starts the app to introspect it).
+$env:Jwt__Key="your-dev-key-here"
+dotnet build HoneyDo/HoneyDo.csproj /p:GenerateApiSpec=true
+#   This writes honeydo-client/HoneyDo.json
+
+# Step 2: Regenerate the TypeScript types from the spec
+cd honeydo-client && npm run generate
+#   This writes src/api/generated.ts
+```
+
+`src/api/types.ts` re-exports from `generated.ts` under stable names (and overrides a few fields where the .NET 10 OpenAPI emitter uses a `number | string` union for integer fields). All page imports use `types.ts` — only `types.ts` needs adjusting if the generated shape changes.
+
 ### Migrations
 
 Migrations are applied automatically via `Database.Migrate()` in `Program.cs` on every API startup. No manual `dotnet ef database update` step is needed during normal development.
@@ -735,6 +773,8 @@ The preference is persisted in `localStorage` under the key `honeydo-color-schem
 
 ### TypeScript API Types (`src/api/types.ts`)
 
+Types are auto-generated from the backend's OpenAPI 3.1 spec via `openapi-typescript`. `src/api/generated.ts` contains the raw generated output; `src/api/types.ts` re-exports everything under stable names used throughout the app. See "Regenerating TypeScript API Types" above.
+
 ```typescript
 TodoList         // id, title, role, ownerName, contributorNames, memberCount,
                  // notStartedCount, partialCount, completeCount, abandonedCount,
@@ -750,3 +790,109 @@ FriendsResult    // friends, pendingReceived, pendingSent
 SendRequestResult    // invitationSent: boolean
 ActivityLogEntry // id, actionType, actorName, detail, timestamp
 ```
+
+---
+
+## 12. Testing Strategy
+
+The frontend uses a three-layer test pyramid:
+
+### Layer 1 — Unit tests (Vitest + Testing Library)
+
+Files: `src/api/*.test.ts`, `src/context/*.test.tsx`
+
+Low-level unit tests for the API client (request formatting, error handling, 401 auto-logout) and the auth context (token persistence, login/logout state transitions). No HTTP or DOM rendering involved.
+
+### Layer 2 — Page integration tests (Vitest + Testing Library + MSW + jest-axe)
+
+Files: `src/pages/*.test.tsx`
+
+Each page test file renders the real page component inside `renderWithProviders` (wraps with `MantineProvider`, `MemoryRouter`, and `AuthProvider`) and intercepts HTTP calls with MSW. Tests exercise complete user flows — typing into form fields, clicking buttons, verifying the DOM updates — without a real browser or backend.
+
+**Test infrastructure (`src/test/`):**
+
+| File | Purpose |
+|---|---|
+| `fixtures.ts` | Typed factory functions: `makeList()`, `makeItem()`, `makeMember()`, `makeProfile()`, `makePagedResult()`. All return sensible defaults; accept partial overrides. |
+| `handlers.ts` | Default MSW request handlers for all API endpoints (happy-path responses). Tests override specific handlers with `server.use(...)`. |
+| `server.ts` | `setupServer(...handlers)` — the MSW Node server instance. |
+| `setup.ts` | Global test setup: `@testing-library/jest-dom` matchers, `jest-axe` `toHaveNoViolations` matcher, `window.matchMedia` stub (jsdom doesn't implement it; Mantine requires it), MSW lifecycle hooks. |
+| `renderWithProviders.tsx` | Render helper. Seeds `localStorage` with a test token for authenticated tests; clears it for auth-flow tests. Accepts `{ authenticated, initialRoute }` options. |
+
+**MSW handler override pattern:** `server.resetHandlers()` runs in `afterEach` (wired in `setup.ts`), so per-test overrides are automatically torn down. Register overrides with `server.use(...)` inside `it()` blocks, before any user interactions.
+
+**Accessibility:** Every page test file includes an axe test that waits for the page to finish loading, then asserts `expect(await axe(container)).toHaveNoViolations()`. Axe caught and surfaced two unlabeled `<input type="date">` elements in `ListDetailPage` that were fixed before merge.
+
+**Mantine selector notes:**
+- `getByRole('textbox', { name: /email/i })` — email inputs (Mantine's required-star span is `aria-hidden`, so `name` matches cleanly without it)
+- `getByPlaceholderText('Your password')` — password inputs (type="password" has no implicit ARIA role; placeholder is the reliable selector)
+- `getByRole('button', { name: /sign in/i })` — submit buttons
+
+### Layer 3 — E2E tests (Playwright)
+
+Files: `e2e/*.spec.ts`
+
+Critical-path flows run against the real Vite app in a Chromium browser. All API calls are intercepted with `page.route()` — no backend required.
+
+**E2E infrastructure (`e2e/helpers.ts`):**
+
+| Export | Purpose |
+|---|---|
+| `seedAuth(page)` | Calls `page.addInitScript()` to seed localStorage with a test token before the page loads. |
+| `setupDefaultRoutes(page)` | Registers `page.route()` handlers for all API endpoints (happy-path responses). Uses regex patterns to correctly match paths with query strings and sub-resources. |
+| `makeList / makeItem / makeProfile / makePagedResult` | Same factory functions as the Vitest layer, used to build route response bodies. |
+| `json(route, body)` / `noContent(route)` | Convenience wrappers around `route.fulfill()`. |
+
+**Route registration order:** Playwright uses the most-recently-registered handler for a matching route. Register test-specific overrides with `page.route(...)` *after* calling `setupDefaultRoutes(page)` and *before* `page.goto(...)`.
+
+**URL pattern note:** `page.route('/api/lists/*')` does not match `/api/lists/list-1/items` — `*` in Playwright route strings does not cross path separators. All multi-segment patterns in `helpers.ts` use regex (e.g. `/\/api\/lists\/[^/]+\/items(\?.*)?$/`) to correctly match paths with sub-resources and query strings.
+
+**Coverage (14 tests across 3 files):**
+
+| File | Tests |
+|---|---|
+| `auth.spec.ts` | Login (valid credentials → home), login (wrong credentials → error), unauthenticated redirect → /login, register → home |
+| `lists.spec.ts` | View list titles, empty state, create list, delete list (with confirm dialog), search filter |
+| `tasks.spec.ts` | View list detail, empty state, add task, cycle status, delete task |
+
+---
+
+## 13. CI Pipeline
+
+CI runs on every push and pull request to `main` via GitHub Actions (`.github/workflows/ci.yml`). Three parallel jobs:
+
+### `backend` job
+
+1. Restore NuGet packages
+2. Build in Release mode
+3. Run 159 xUnit tests (WebApplicationFactory, EF InMemory)
+4. Vulnerability scan: `dotnet list package --vulnerable --include-transitive` — fails if any known CVE affects a direct or transitive package
+
+### `frontend` job
+
+1. Install npm dependencies (`--legacy-peer-deps` for openapi-typescript TS6 peer dep)
+2. Vulnerability scan: `npm audit --audit-level=high` — fails on high/critical severity
+3. Run Vitest unit + integration tests (49 tests)
+4. TypeScript + Vite production build
+
+### `e2e` job
+
+1. Install npm dependencies
+2. Install Playwright Chromium browser + system dependencies
+3. Run Playwright E2E tests (14 tests, Chromium only)
+4. On failure: upload `playwright-report/` as a GitHub Actions artifact (7-day retention) for trace and screenshot inspection
+
+### Pre-commit hook
+
+`.githooks/pre-commit` runs the full backend test suite (`dotnet test`) before every local commit. Wire it up once after cloning:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### Dependabot
+
+`.github/dependabot.yml` sends weekly automated PRs for:
+- GitHub Actions (pinned action versions)
+- NuGet packages
+- npm packages (scoped to `honeydo-client/`)
