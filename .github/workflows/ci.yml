@@ -11,7 +11,7 @@ jobs:
     name: Backend (dotnet test)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v5
@@ -43,7 +43,7 @@ jobs:
       run:
         working-directory: honeydo-client
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Node 20
         uses: actions/setup-node@v6
