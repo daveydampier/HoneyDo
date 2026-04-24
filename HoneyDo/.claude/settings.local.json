@@ -71,7 +71,14 @@
       "WebFetch(domain:github.com)",
       "Bash(dotnet restore *)",
       "Bash(npm test *)",
-      "PowerShell(cd C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo; $msg = \"Add Dependabot and vulnerability scanning to CI`n`n- Add .github/dependabot.yml covering github-actions, nuget, and npm`n  ecosystems \\(weekly cadence, 5 PR limit each\\)`n- Add dotnet list package flag to backend job; fails build on any known NuGet CVE`n- Add npm audit --audit-level=high to frontend job; fails on`n  high/critical findings, ignores low/moderate noise from dev tooling`n`nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\"; $msg | Out-File -FilePath \"$env:TEMP\\\\commit_msg.txt\" -Encoding utf8; git commit -F \"$env:TEMP\\\\commit_msg.txt\")"
+      "PowerShell(cd C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo; $msg = \"Add Dependabot and vulnerability scanning to CI`n`n- Add .github/dependabot.yml covering github-actions, nuget, and npm`n  ecosystems \\(weekly cadence, 5 PR limit each\\)`n- Add dotnet list package flag to backend job; fails build on any known NuGet CVE`n- Add npm audit --audit-level=high to frontend job; fails on`n  high/critical findings, ignores low/moderate noise from dev tooling`n`nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\"; $msg | Out-File -FilePath \"$env:TEMP\\\\commit_msg.txt\" -Encoding utf8; git commit -F \"$env:TEMP\\\\commit_msg.txt\")",
+      "Bash(^-\")",
+      "Read(//mnt/c/Users/davey/source/repos/HoneyDo/honeydo-client/**)",
+      "PowerShell(cd C:\\\\Users\\\\davey\\\\source\\\\repos\\\\HoneyDo; $env:Jwt__Key = \"BUILD_TIME_DOCGEN_KEY_NOT_FOR_RUNTIME_USE!!\"; dotnet build HoneyDo/HoneyDo.csproj --configuration Release 2>&1)",
+      "Bash(npx openapi-typescript *)",
+      "Bash(sed -n '210,225p' /c/Users/davey/source/repos/HoneyDo/honeydo-client/src/pages/ListDetailPage.tsx)",
+      "Bash(sed -n '680,730p' /c/Users/davey/source/repos/HoneyDo/honeydo-client/src/pages/ListDetailPage.tsx)",
+      "Bash(git -C /c/Users/davey/source/repos/HoneyDo diff --cached HoneyDo/HoneyDo.csproj)"
     ]
   }
 }
