@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("HoneyDo.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b1a64c0e050d574bc48325ee7a8366485388c020")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+30f304bb131ea62c4c9ab2b990f8c37163fc229b")]
 [assembly: System.Reflection.AssemblyProductAttribute("HoneyDo.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HoneyDo.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
