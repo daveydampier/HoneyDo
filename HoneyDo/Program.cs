@@ -35,6 +35,7 @@ using (var scope = app.Services.CreateScope())
         db.Database.Migrate();
 }
 
+app.UseMiddleware<SecurityHeadersMiddleware>(); // Must be first — headers must appear on all responses, including error payloads.
 app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
