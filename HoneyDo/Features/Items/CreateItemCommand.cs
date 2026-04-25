@@ -21,7 +21,7 @@ public class CreateItemCommandValidator : AbstractValidator<CreateItemCommand>
     public CreateItemCommandValidator()
     {
         RuleFor(x => x.Content).NotEmpty().MaximumLength(512);
-        RuleFor(x => x.Notes).MaximumLength(2048).When(x => x.Notes is not null);
+        RuleFor(x => x.Notes).MaximumLength(256).When(x => x.Notes is not null);
         RuleFor(x => x.DueDate)
             .Matches(@"^\d{4}-\d{2}-\d{2}$").WithMessage("DueDate must be in YYYY-MM-DD format.")
             .When(x => x.DueDate is not null);

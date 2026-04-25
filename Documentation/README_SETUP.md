@@ -191,7 +191,7 @@ Tracked in the order I'd implement, with the trigger that would move each from "
 
 | Item | Trigger |
 |---|---|
-| Replace `useEffect` + `useState` data fetching with TanStack Query | Adding the third page that hits `/lists`, or wanting optimistic updates that survive navigation |
+| Add TanStack Query for client-side caching and optimistic-update rollback | First reproduced lost-update or stale-data UX complaint; data fetching has already moved to React 19 `use()` + Suspense, so the remaining gap is caching and background refetch |
 | Add `[Timestamp] byte[] RowVersion` to mutable entities + 409 handling | First reproduced lost-update report from a user |
 | Inject `TimeProvider` into handlers, switch tests to `FakeTimeProvider` | First test that needs to assert on a specific timestamp |
 | Add ASP.NET Core rate limiter to `/api/auth/*` | Before any internet-facing deploy |

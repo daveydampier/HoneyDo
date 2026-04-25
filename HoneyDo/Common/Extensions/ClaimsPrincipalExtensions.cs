@@ -14,4 +14,7 @@ public static class ClaimsPrincipalExtensions
             ? id
             : throw new UnauthorizedException();
     }
+
+    public static string GetDisplayName(this ClaimsPrincipal user) =>
+        user.FindFirstValue(ClaimTypes.Name) ?? throw new UnauthorizedException();
 }
