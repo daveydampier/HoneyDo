@@ -10,13 +10,12 @@ public class SmtpEmailService(IConfiguration config, ILogger<SmtpEmailService> l
     {
         var host = config["Email:Smtp:Host"];
 
-        // If no SMTP host is configured, log the full email to the console so
-        // developers can grab the invite link without needing a real mail server.
+        // If no SMTP host is configured, avoid logging private email contents.
         if (string.IsNullOrWhiteSpace(host))
         {
             logger.LogInformation(
-                "📧 [DEV — no SMTP configured] To: {To} | Subject: {Subject}\n{Body}",
-                to, subject, htmlBody);
+                "📧 [DEV — no SMTP configured] Email suppressed. Subject: {Subject} | BodyLength: {BodyLength}",
+                subject, htmlBody?.Length ?? 0);
             return;
         }
 
