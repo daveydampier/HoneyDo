@@ -747,7 +747,7 @@ Each page test file renders the real page component inside `renderWithProviders`
 | `handlers.ts` | Default MSW request handlers for all API endpoints (happy-path responses). Tests override specific handlers with `server.use(...)`. |
 | `server.ts` | `setupServer(...handlers)` — the MSW Node server instance. |
 | `setup.ts` | Global test setup: `@testing-library/jest-dom` matchers, `jest-axe` `toHaveNoViolations` matcher, `window.matchMedia` stub (jsdom doesn't implement it; Mantine requires it), MSW lifecycle hooks. |
-| `renderWithProviders.tsx` | Render helper. Seeds `localStorage` with a test token for authenticated tests; clears it for auth-flow tests. Accepts `{ authenticated, initialRoute }` options. |
+| `renderWithProviders.tsx` | Render helper. Seeds `localStorage` with a test token for authenticated tests; clears it for auth-flow tests. Accepts `{ authenticated, initialRoute }` options. Wraps the component in `MantineProvider`, `MemoryRouter`, `AuthProvider`, `ErrorBoundary`, and `Suspense` — mirroring the production `PageShell` so rejected `use()` promises are caught rather than crashing the test tree. |
 
 **MSW handler override pattern:** `server.resetHandlers()` runs in `afterEach` (wired in `setup.ts`), so per-test overrides are automatically torn down. Register overrides with `server.use(...)` inside `it()` blocks, before any user interactions.
 
@@ -802,7 +802,7 @@ CI runs on every push and pull request to `main` via GitHub Actions (`.github/wo
 
 1. Install npm dependencies (`--legacy-peer-deps` for openapi-typescript TS6 peer dep)
 2. Vulnerability scan: `npm audit --audit-level=high` — fails on high/critical severity
-3. Run Vitest unit + integration tests (49 tests)
+3. Run Vitest unit + integration tests (48 tests)
 4. TypeScript + Vite production build
 
 ### `e2e` job
@@ -859,4 +859,6 @@ The application uses a request/response model throughout. Members editing the sa
 
 ### TanStack Query Not Used
 
-Data fetching is implemented with hand-rolled `useEffect` + `useState` + loading/error state. There is no client-side cache: navigating away from a page and back always triggers a fresh network fetch. Optimistic updates are implemented correctly but are not rolled back on failure. TanStack Query would eliminate all of this boilerplate and add caching, background refetch, and proper rollback. It was deferred because migrating the existing pages — particularly `ListDetailPage` with its many interdependent mutations — is a full sprint of work with meaningful regression risk. The current implementation is correct; the missing piece is efficiency and resilience.
+Data fetching uses React 19's `use()` hook paired with `<Suspense>`. Each page creates a stable fetch promise in `useState(() => api.get(...))` (or `Promise.all([...])` for pages that need multiple resources in parallel), then reads it with `use()` — which suspends the component until the promise settles. `PageShell` wraps every private route in an `<ErrorBoundary>` + `<Suspense>`, so errors surface to a "Something went wrong" fallback without per-page loading or error state. This replaced the earlier hand-rolled `useEffect` + `useState` + loading/error pattern and reduced boilerplate significantly.
+
+What `use()` does **not** provide: a client-side cache, background refetch, or rollback on optimistic-update failure. Navigating away from a page and back always triggers a fresh network request. TanStack Query would add all three. It remains deferred because the current implementation is correct and the optimistic update paths that would benefit most from rollback (`ListDetailPage` mutations) are the hardest to migrate safely.

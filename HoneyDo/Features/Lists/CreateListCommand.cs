@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HoneyDo.Features.Lists;
 
-public record CreateListCommand(string Title, Guid ProfileId) : IRequest<TodoListResponse>;
+public record CreateListCommand(string Title, Guid ProfileId, string OwnerDisplayName) : IRequest<TodoListResponse>;
 
 public class CreateListCommandValidator : AbstractValidator<CreateListCommand>
 {
@@ -37,12 +37,8 @@ public class CreateListCommandHandler(AppDbContext db) : IRequestHandler<CreateL
         db.ListMembers.Add(membership);
         await db.SaveChangesAsync(ct);
 
-        var ownerName = await db.Profiles
-            .Where(p => p.Id == request.ProfileId)
-            .Select(p => p.DisplayName)
-            .FirstAsync(ct);
-
-        // New list has only the owner — no contributors yet
-        return new TodoListResponse(list.Id, list.Title, MemberRole.Owner, ownerName, [], 1, 0, 0, 0, 0, list.CreatedAt, list.UpdatedAt, null, []);
+        // New list: only the owner, no contributors, no items, no tags yet.
+        // OwnerDisplayName comes from the caller's JWT claim — no extra DB round trip needed.
+        return new TodoListResponse(list.Id, list.Title, MemberRole.Owner, request.OwnerDisplayName, [], 1, 0, 0, 0, 0, list.CreatedAt, list.UpdatedAt, null, []);
     }
 }

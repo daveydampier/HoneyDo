@@ -3,7 +3,11 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedAuth, setupDefaultRoutes, makeList, makePagedResult, makeItem, json } from './helpers'
+import { seedAuth, setupDefaultRoutes, makeList, makePagedResult, makeItem, json, waitForListsLoad, setupPageDiagnostics } from './helpers'
+
+test.beforeEach(async ({ page }) => {
+  setupPageDiagnostics(page)
+})
 
 // ---------------------------------------------------------------------------
 // Login
@@ -18,7 +22,15 @@ test('login with valid credentials navigates to the lists page', async ({ page }
   await page.goto('/login')
   await page.getByRole('textbox', { name: /email/i }).fill('alice@example.com')
   await page.getByPlaceholder('Your password').fill('correct-password')
+
+  // Set up the waiter before clicking — the login triggers a navigate('/') which
+  // mounts ListsPage, which fires api.get('/lists') via use() during its render.
+  const listsReady = waitForListsLoad(page)
   await page.getByRole('button', { name: /sign in/i }).click()
+  await listsReady
+  console.log('[auth login test] URL after ready:', page.url())
+  console.log('[auth login test] ErrorBoundary visible?', await page.locator('text=Something went wrong').count())
+  console.log('[auth login test] #root text:', (await page.locator('#root').textContent())?.substring(0, 500))
 
   // After login, the app routes to / which renders the lists page
   await expect(page.getByRole('heading', { name: /my lists/i })).toBeVisible()
@@ -65,7 +77,11 @@ test('register with valid details navigates to the lists page', async ({ page })
   await page.getByPlaceholder('Your name').fill('Alice')
   await page.getByRole('textbox', { name: /email/i }).fill('alice@example.com')
   await page.getByPlaceholder('Min 8 characters').fill('secret123')
+
+  // Same pattern: register triggers navigate('/') → ListsPage fetches lists.
+  const listsReady = waitForListsLoad(page)
   await page.getByRole('button', { name: /create account/i }).click()
+  await listsReady
 
   await expect(page.getByRole('heading', { name: /my lists/i })).toBeVisible()
 })

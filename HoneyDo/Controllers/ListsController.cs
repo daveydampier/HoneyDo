@@ -27,7 +27,7 @@ public class ListsController(IMediator mediator) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TodoListResponse>> Create(CreateListRequest request, CancellationToken ct)
     {
-        var result = await mediator.Send(new CreateListCommand(request.Title, User.GetProfileId()), ct);
+        var result = await mediator.Send(new CreateListCommand(request.Title, User.GetProfileId(), User.GetDisplayName()), ct);
         return CreatedAtAction(nameof(GetById), new { listId = result.Id }, result);
     }
 

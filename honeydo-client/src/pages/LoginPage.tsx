@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useActionState, startTransition, type FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { ApiError } from '../api/types'
@@ -8,27 +8,31 @@ import {
 } from '@mantine/core'
 import { IconAlertCircle } from '@tabler/icons-react'
 
+type LoginPayload = { email: string; password: string }
+
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: FormEvent) {
+  const [error, submitAction, isPending] = useActionState(
+    async (_prev: string | null, { email: e, password: p }: LoginPayload) => {
+      try {
+        await login(e, p)
+        navigate('/')
+        return null
+      } catch (err) {
+        const apiErr = err as ApiError
+        return apiErr.status === 404 ? 'Invalid email or password.' : apiErr.title
+      }
+    },
+    null,
+  )
+
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError(null)
-    setLoading(true)
-    try {
-      await login(email, password)
-      navigate('/')
-    } catch (err) {
-      const apiErr = err as ApiError
-      setError(apiErr.status === 404 ? 'Invalid email or password.' : apiErr.title)
-    } finally {
-      setLoading(false)
-    }
+    startTransition(() => submitAction({ email, password }))
   }
 
   return (
@@ -56,7 +60,7 @@ export default function LoginPage() {
               {error}
             </Alert>
           )}
-          <Button type="submit" loading={loading} fullWidth mt="xs">
+          <Button type="submit" loading={isPending} fullWidth mt="xs">
             Sign in
           </Button>
         </Stack>

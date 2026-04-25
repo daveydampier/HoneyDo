@@ -3,7 +3,7 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedAuth, setupDefaultRoutes, makeList, makeItem, makePagedResult, json, noContent } from './helpers'
+import { seedAuth, setupDefaultRoutes, makeList, makeItem, makePagedResult, json, noContent, waitForItemsLoad, setupPageDiagnostics } from './helpers'
 
 const LIST_ID = 'list-1'
 
@@ -14,6 +14,7 @@ const itemUrl = (listId: string, itemId: string) =>
 const listUrl = (listId: string) => new RegExp(`/api/lists/${listId}(\\?.*)?$`)
 
 test.beforeEach(async ({ page }) => {
+  setupPageDiagnostics(page)
   await seedAuth(page)
   await setupDefaultRoutes(page)
 })
@@ -26,7 +27,12 @@ test('list detail page shows the list title and tasks', async ({ page }) => {
     json(route, makePagedResult([makeItem({ content: 'Mow the lawn' })]))
   )
 
+  const ready = waitForItemsLoad(page)
   await page.goto(`/lists/${LIST_ID}`)
+  await ready
+  console.log('[tasks test] URL after ready:', page.url())
+  console.log('[tasks test] ErrorBoundary visible?', await page.locator('text=Something went wrong').count())
+  console.log('[tasks test] #root text:', (await page.locator('#root').textContent())?.substring(0, 500))
 
   await expect(page.getByText('Weekend Chores')).toBeVisible()
   await expect(page.getByText('Mow the lawn')).toBeVisible()
@@ -37,7 +43,9 @@ test('empty state is shown when the list has no tasks', async ({ page }) => {
     json(route, makePagedResult([]))
   )
 
+  const ready = waitForItemsLoad(page)
   await page.goto(`/lists/${LIST_ID}`)
+  await ready
 
   await expect(page.getByText(/no tasks yet/i)).toBeVisible()
 })
@@ -49,7 +57,9 @@ test('adding a task appends it to the list', async ({ page }) => {
     return json(route, makeItem({ id: 'item-new', content: body.content }))
   })
 
+  const ready = waitForItemsLoad(page)
   await page.goto(`/lists/${LIST_ID}`)
+  await ready
   await expect(page.getByPlaceholder(/new task/i)).toBeVisible()
 
   await page.getByPlaceholder(/new task/i).fill('Walk the dog')
@@ -66,7 +76,9 @@ test('clicking the status button cycles the task status', async ({ page }) => {
     json(route, makeItem({ status: { id: 2, name: 'Partial' } }))
   )
 
+  const ready = waitForItemsLoad(page)
   await page.goto(`/lists/${LIST_ID}`)
+  await ready
 
   const statusBtn = page.getByRole('button', { name: /not started/i })
   await expect(statusBtn).toBeVisible()
@@ -83,7 +95,9 @@ test('deleting a task removes it from the list', async ({ page }) => {
     noContent(route)
   )
 
+  const ready = waitForItemsLoad(page)
   await page.goto(`/lists/${LIST_ID}`)
+  await ready
   await expect(page.getByText('Task to remove')).toBeVisible()
 
   await page.getByRole('button', { name: /delete task/i }).click()

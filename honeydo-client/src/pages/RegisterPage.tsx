@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useActionState, startTransition, type FormEvent } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/client'
@@ -8,6 +8,8 @@ import {
   Button, Alert, Anchor, Stack, Text,
 } from '@mantine/core'
 import { IconAlertCircle, IconConfetti } from '@tabler/icons-react'
+
+type RegisterPayload = { email: string; password: string; displayName: string }
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -21,8 +23,6 @@ export default function RegisterPage() {
   const [email, setEmail] = useState(inviteEmail)
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [loading, setLoading] = useState(false)
 
   // If the URL supplies an email (from the invite link), keep the field in sync
   // with it on first render but still let the user edit it.
@@ -30,33 +30,37 @@ export default function RegisterPage() {
     if (inviteEmail) setEmail(inviteEmail)
   }, [inviteEmail])
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setErrors({})
-    setLoading(true)
-    try {
-      await register(email, password, displayName)
+  const [errors, submitAction, isPending] = useActionState(
+    async (_prev: Record<string, string[]>, { email: e, password: p, displayName: n }: RegisterPayload) => {
+      try {
+        await register(e, p, n)
 
-      // If this registration came from an invite link, redeem the token now.
-      if (inviteToken) {
-        try {
-          await api.post<void>('/invitations/accept', { token: inviteToken })
-          navigate('/friends')
-        } catch {
+        // If this registration came from an invite link, redeem the token now.
+        if (inviteToken) {
+          try {
+            await api.post<void>('/invitations/accept', { token: inviteToken })
+            navigate('/friends')
+          } catch {
+            navigate('/')
+          }
+        } else {
           navigate('/')
         }
-      } else {
-        navigate('/')
+        return {}
+      } catch (err) {
+        const apiErr = err as ApiError
+        return apiErr.errors ?? { _: [apiErr.title] }
       }
-    } catch (err) {
-      const apiErr = err as ApiError
-      setErrors(apiErr.errors ?? { _: [apiErr.title] })
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    {},
+  )
 
   const fieldError = (field: string) => errors[field]?.[0] ?? errors[field.toLowerCase()]?.[0]
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    startTransition(() => submitAction({ email, password, displayName }))
+  }
 
   return (
     <Container size={400} pt={80}>
@@ -100,7 +104,7 @@ export default function RegisterPage() {
               {errors._[0]}
             </Alert>
           )}
-          <Button type="submit" loading={loading} fullWidth mt="xs">
+          <Button type="submit" loading={isPending} fullWidth mt="xs">
             Create account
           </Button>
         </Stack>

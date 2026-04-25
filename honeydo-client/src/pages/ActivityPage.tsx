@@ -3,12 +3,12 @@ import { useParams, Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { ActivityLogEntry, TodoList } from '../api/types'
 import {
-  Container, Title, Text, Anchor, Alert, Loader,
-  Group, Timeline,
+  Container, Title, Text, Anchor, Group, Loader,
+  Timeline,
 } from '@mantine/core'
 import {
   IconPlus, IconCheck, IconTrash, IconUserPlus,
-  IconLock, IconActivity, IconAlertCircle,
+  IconLock, IconActivity,
   IconTag, IconNotes,
 } from '@tabler/icons-react'
 
@@ -51,24 +51,26 @@ function formatTimestamp(iso: string): string {
 
 export default function ActivityPage() {
   const { listId } = useParams<{ listId: string }>()
-  const [list, setList]       = useState<TodoList | null>(null)
-  const [logs, setLogs]       = useState<ActivityLogEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState<string | null>(null)
+
+  const [list, setList] = useState<TodoList | null>(null)
+  const [logs, setLogs] = useState<ActivityLogEntry[]>([])
 
   useEffect(() => {
     if (!listId) return
     Promise.all([
       api.get<TodoList>(`/lists/${listId}`),
       api.get<ActivityLogEntry[]>(`/lists/${listId}/activity`),
-    ])
-      .then(([listRes, logsRes]) => {
-        setList(listRes)
-        setLogs(logsRes)
-      })
-      .catch(() => setError('Failed to load activity log.'))
-      .finally(() => setLoading(false))
+    ] as const).then(([listData, logsData]) => {
+      setList(listData)
+      setLogs(logsData)
+    }).catch(() => {})
   }, [listId])
+
+  if (!list) return (
+    <Group justify="center" pt={80}>
+      <Loader size="sm" />
+    </Group>
+  )
 
   return (
     <Container size="md" pt="xl">
@@ -76,22 +78,12 @@ export default function ActivityPage() {
         ← Back to list
       </Anchor>
 
-      <Title order={1} mt="sm" mb={4}>{list?.title ?? 'Activity'}</Title>
+      <Title order={1} mt="sm" mb={4}>{list.title}</Title>
       <Text size="sm" c="dimmed" mb="xl">Activity log · newest first</Text>
 
-      {loading && <Group justify="center" mt="xl"><Loader size="sm" /></Group>}
-
-      {error && (
-        <Alert color="tangerine" variant="light" icon={<IconAlertCircle size={16} />}>
-          {error}
-        </Alert>
-      )}
-
-      {!loading && !error && logs.length === 0 && (
+      {logs.length === 0 ? (
         <Text size="sm" c="dimmed">No activity recorded yet.</Text>
-      )}
-
-      {!loading && !error && logs.length > 0 && (
+      ) : (
         <Timeline active={logs.length - 1} bulletSize={24} lineWidth={2}>
           {logs.map(log => (
             <Timeline.Item

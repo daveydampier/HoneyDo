@@ -6,7 +6,7 @@ import { TAG_COLORS, getTagTextColor } from '../utils/tags'
 import {
   Container, Title, Text, TextInput, PasswordInput, Button,
   Paper, Stack, Group, Alert, Anchor, Avatar, ColorSwatch,
-  Badge, ActionIcon, SegmentedControl, useMantineColorScheme,
+  Badge, ActionIcon, SegmentedControl, useMantineColorScheme, Loader,
 } from '@mantine/core'
 import { IconAlertCircle, IconCircleCheck, IconX, IconDeviceDesktop, IconSun, IconMoon } from '@tabler/icons-react'
 
@@ -17,13 +17,27 @@ export default function ProfilePage() {
   const { colorScheme, setColorScheme } = useMantineColorScheme()
 
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [myTags, setMyTags] = useState<Tag[]>([])
 
-  // Profile form
+  // Profile form — initialized once data loads
   const [displayName, setDisplayName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [urlDraft, setUrlDraft] = useState('')
+
+  useEffect(() => {
+    Promise.all([
+      api.get<Profile>('/profile'),
+      api.get<Tag[]>('/tags'),
+    ] as const).then(([profileData, tagsData]) => {
+      setProfile(profileData)
+      setMyTags(tagsData)
+      setDisplayName(profileData.displayName)
+      setPhoneNumber(profileData.phoneNumber ?? '')
+      setAvatarUrl(profileData.avatarUrl ?? null)
+      setUrlDraft(profileData.avatarUrl?.startsWith('data:') ? '' : (profileData.avatarUrl ?? ''))
+    }).catch(() => {})
+  }, [])
   const [profileError, setProfileError] = useState<Record<string, string[]>>({})
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
@@ -42,29 +56,12 @@ export default function ProfilePage() {
   const [passwordSaving, setPasswordSaving] = useState(false)
 
   // Tags
-  const [myTags, setMyTags] = useState<Tag[]>([])
   const [tagName, setTagName] = useState('')
   const [tagColor, setTagColor] = useState(TAG_COLORS[0])
   const [tagCreating, setTagCreating] = useState(false)
   const [tagError, setTagError] = useState<string | null>(null)
 
   const isUploadedAvatar = avatarUrl?.startsWith('data:') ?? false
-
-  useEffect(() => {
-    api.get<Tag[]>('/tags').then(setMyTags).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    api.get<Profile>('/profile')
-      .then(p => {
-        setProfile(p)
-        setDisplayName(p.displayName)
-        setPhoneNumber(p.phoneNumber ?? '')
-        setAvatarUrl(p.avatarUrl ?? null)
-        setUrlDraft(p.avatarUrl?.startsWith('data:') ? '' : (p.avatarUrl ?? ''))
-      })
-      .finally(() => setLoading(false))
-  }, [])
 
   async function handleAvatarFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -191,10 +188,10 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) return (
-    <Container size={480} pt="xl">
-      <Text c="dimmed">Loading…</Text>
-    </Container>
+  if (!profile) return (
+    <Group justify="center" pt={80}>
+      <Loader size="sm" />
+    </Group>
   )
 
   return (
@@ -202,13 +199,13 @@ export default function ProfilePage() {
       <Anchor component={Link} to="/" size="sm" c="dimmed">← Back to lists</Anchor>
       <Title order={1} mt="sm" mb={4}>Profile</Title>
       <Text size="xs" c="dimmed" mb="xl">
-        Member since {new Date(profile!.createdAt).toLocaleDateString()}
+        Member since {new Date(profile.createdAt).toLocaleDateString()}
       </Text>
 
       {/* Account details */}
       <Paper p="xl" radius="md" withBorder mb="lg">
         <Title order={3} mb="md">Account details</Title>
-        <Text size="sm" c="dimmed" mb="md">Email: {profile!.email}</Text>
+        <Text size="sm" c="dimmed" mb="md">Email: {profile.email}</Text>
 
         {/* Avatar */}
         <Stack gap="xs" mb="md">
