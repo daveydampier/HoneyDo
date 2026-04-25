@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Amber hexagon (pointy-top) -->
+  <polygon
+    points="16,2 28,9 28,23 16,30 4,23 4,9"
+    fill="#F59E0B"
+  />
+  <!-- White checkmark -->
+  <polyline
+    points="9,16 13.5,21 23,11"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
