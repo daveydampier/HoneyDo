@@ -1,0 +1,4 @@
+# HoneyDo is a fully authenticated application.
+# There are no public pages for search engines to index.
+User-agent: *
+Disallow: /
