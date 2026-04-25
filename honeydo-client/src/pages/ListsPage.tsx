@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, type FormEvent } from 'react'
+import { useState, use, useMemo, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { TodoList, Tag, ApiError } from '../api/types'
 import {
   Container, Group, Title, Text, TextInput, Button,
-  Paper, Stack, Anchor, Loader, Alert, Badge, Popover,
+  Paper, Stack, Anchor, Alert, Badge, Popover,
 } from '@mantine/core'
 import { IconSearch, IconAlertCircle, IconTag, IconChevronDown } from '@tabler/icons-react'
 import { getTagTextColor } from '../utils/tags'
@@ -17,10 +17,12 @@ const STATUS_CHIPS = [
 ] as const
 
 export default function ListsPage() {
-  const [lists, setLists] = useState<TodoList[]>([])
+  const [listsPromise] = useState(() => api.get<TodoList[]>('/lists'))
+  const initialLists = use(listsPromise)
+
+  const [lists, setLists] = useState(initialLists)
   const [newTitle, setNewTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set())
@@ -75,13 +77,6 @@ export default function ListsPage() {
       setDeletingId(null)
     }
   }
-
-  useEffect(() => {
-    api.get<TodoList[]>('/lists')
-      .then(setLists)
-      .catch(() => setError('Failed to load lists.'))
-      .finally(() => setLoading(false))
-  }, [])
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
@@ -210,134 +205,130 @@ export default function ListsPage() {
         </Alert>
       )}
 
-      {loading ? (
-        <Group justify="center" mt="xl"><Loader size="sm" /></Group>
-      ) : (
-        <Stack gap="xl">
-          {/* Active lists */}
-          <section>
-            {/* Section heading */}
-            <Group justify="space-between" align="center" mb="xs">
-              <Text size="sm" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.06em' }}>
-                Active
-              </Text>
-              {hasFilters && (
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => { setSearch(''); setSelectedTagIds(new Set()) }}
+      <Stack gap="xl">
+        {/* Active lists */}
+        <section>
+          {/* Section heading */}
+          <Group justify="space-between" align="center" mb="xs">
+            <Text size="sm" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.06em' }}>
+              Active
+            </Text>
+            {hasFilters && (
+              <Button
+                size="xs"
+                variant="subtle"
+                color="gray"
+                onClick={() => { setSearch(''); setSelectedTagIds(new Set()) }}
+              >
+                Clear filters
+              </Button>
+            )}
+          </Group>
+
+          {/* Filter row — only shown when there are active lists */}
+          {activeLists.length > 0 && (
+            <Group gap="sm" mb="sm" align="center">
+              <TextInput
+                style={{ flex: 1 }}
+                size="xs"
+                placeholder="Search lists…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                leftSection={<IconSearch size={12} />}
+              />
+
+              {/* Tags popover — only rendered when tags exist */}
+              {availableTags.length > 0 && (
+                <Popover
+                  opened={tagPopoverOpen}
+                  onChange={setTagPopoverOpen}
+                  position="bottom-end"
+                  shadow="md"
+                  width={220}
                 >
-                  Clear filters
-                </Button>
+                  <Popover.Target>
+                    <Button
+                      size="xs"
+                      variant={selectedTagIds.size > 0 ? 'filled' : 'default'}
+                      leftSection={<IconTag size={13} />}
+                      rightSection={
+                        selectedTagIds.size > 0
+                          ? <Badge size="xs" circle variant="white" color="aqua">{selectedTagIds.size}</Badge>
+                          : <IconChevronDown size={12} />
+                      }
+                      onClick={() => setTagPopoverOpen(o => !o)}
+                    >
+                      Tags
+                    </Button>
+                  </Popover.Target>
+
+                  <Popover.Dropdown>
+                    <Stack gap="xs">
+                      <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>
+                        Filter by tag
+                      </Text>
+                      {availableTags.map(tag => {
+                        const active = selectedTagIds.has(tag.id)
+                        return (
+                          <Badge
+                            key={tag.id}
+                            size="md"
+                            variant={active ? 'filled' : 'outline'}
+                            fullWidth
+                            style={{
+                              cursor: 'pointer',
+                              justifyContent: 'flex-start',
+                              background: active ? tag.color : 'transparent',
+                              color: active ? getTagTextColor(tag.color) : tag.color,
+                              borderColor: tag.color,
+                            }}
+                            leftSection={<IconTag size={11} />}
+                            onClick={() => toggleTag(tag.id)}
+                          >
+                            {tag.name}
+                          </Badge>
+                        )
+                      })}
+                      {selectedTagIds.size > 0 && (
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          color="gray"
+                          fullWidth
+                          mt={4}
+                          onClick={() => setSelectedTagIds(new Set())}
+                        >
+                          Clear tag selection
+                        </Button>
+                      )}
+                    </Stack>
+                  </Popover.Dropdown>
+                </Popover>
               )}
             </Group>
-
-            {/* Filter row — only shown when there are active lists */}
-            {activeLists.length > 0 && (
-              <Group gap="sm" mb="sm" align="center">
-                <TextInput
-                  style={{ flex: 1 }}
-                  size="xs"
-                  placeholder="Search lists…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  leftSection={<IconSearch size={12} />}
-                />
-
-                {/* Tags popover — only rendered when tags exist */}
-                {availableTags.length > 0 && (
-                  <Popover
-                    opened={tagPopoverOpen}
-                    onChange={setTagPopoverOpen}
-                    position="bottom-end"
-                    shadow="md"
-                    width={220}
-                  >
-                    <Popover.Target>
-                      <Button
-                        size="xs"
-                        variant={selectedTagIds.size > 0 ? 'filled' : 'default'}
-                        leftSection={<IconTag size={13} />}
-                        rightSection={
-                          selectedTagIds.size > 0
-                            ? <Badge size="xs" circle variant="white" color="aqua">{selectedTagIds.size}</Badge>
-                            : <IconChevronDown size={12} />
-                        }
-                        onClick={() => setTagPopoverOpen(o => !o)}
-                      >
-                        Tags
-                      </Button>
-                    </Popover.Target>
-
-                    <Popover.Dropdown>
-                      <Stack gap="xs">
-                        <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>
-                          Filter by tag
-                        </Text>
-                        {availableTags.map(tag => {
-                          const active = selectedTagIds.has(tag.id)
-                          return (
-                            <Badge
-                              key={tag.id}
-                              size="md"
-                              variant={active ? 'filled' : 'outline'}
-                              fullWidth
-                              style={{
-                                cursor: 'pointer',
-                                justifyContent: 'flex-start',
-                                background: active ? tag.color : 'transparent',
-                                color: active ? getTagTextColor(tag.color) : tag.color,
-                                borderColor: tag.color,
-                              }}
-                              leftSection={<IconTag size={11} />}
-                              onClick={() => toggleTag(tag.id)}
-                            >
-                              {tag.name}
-                            </Badge>
-                          )
-                        })}
-                        {selectedTagIds.size > 0 && (
-                          <Button
-                            size="xs"
-                            variant="subtle"
-                            color="gray"
-                            fullWidth
-                            mt={4}
-                            onClick={() => setSelectedTagIds(new Set())}
-                          >
-                            Clear tag selection
-                          </Button>
-                        )}
-                      </Stack>
-                    </Popover.Dropdown>
-                  </Popover>
-                )}
-              </Group>
-            )}
-
-            {activeLists.length === 0 ? (
-              <Text size="sm" c="dimmed">No active lists. Create one above.</Text>
-            ) : filteredActiveLists.length === 0 ? (
-              <Text size="sm" c="dimmed">
-                No lists match your{search.trim() ? ' search' : ''}{search.trim() && selectedTagIds.size > 0 ? ' and' : ''}{selectedTagIds.size > 0 ? ' tag filter' : ''}.
-              </Text>
-            ) : (
-              <Stack gap="sm">{filteredActiveLists.map(l => listRow(l))}</Stack>
-            )}
-          </section>
-
-          {/* Closed lists */}
-          {closedLists.length > 0 && (
-            <section>
-              <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb="xs" style={{ letterSpacing: '0.05em' }}>
-                Closed
-              </Text>
-              <Stack gap="sm">{closedLists.map(l => listRow(l, true))}</Stack>
-            </section>
           )}
-        </Stack>
-      )}
+
+          {activeLists.length === 0 ? (
+            <Text size="sm" c="dimmed">No active lists. Create one above.</Text>
+          ) : filteredActiveLists.length === 0 ? (
+            <Text size="sm" c="dimmed">
+              No lists match your{search.trim() ? ' search' : ''}{search.trim() && selectedTagIds.size > 0 ? ' and' : ''}{selectedTagIds.size > 0 ? ' tag filter' : ''}.
+            </Text>
+          ) : (
+            <Stack gap="sm">{filteredActiveLists.map(l => listRow(l))}</Stack>
+          )}
+        </section>
+
+        {/* Closed lists */}
+        {closedLists.length > 0 && (
+          <section>
+            <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb="xs" style={{ letterSpacing: '0.05em' }}>
+              Closed
+            </Text>
+            <Stack gap="sm">{closedLists.map(l => listRow(l, true))}</Stack>
+          </section>
+        )}
+      </Stack>
     </Container>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -11,14 +11,22 @@ import ListDetailPage from './ListDetailPage'
 
 const LIST_ID = 'list-1'
 
-/** Render the detail page with the correct URL param wired up. */
-function renderDetailPage() {
-  return renderWithProviders(
-    <Routes>
-      <Route path="/lists/:listId" element={<ListDetailPage />} />
-    </Routes>,
-    { initialRoute: `/lists/${LIST_ID}` },
-  )
+/**
+ * ListDetailPage uses React 19's use() which suspends on first render.
+ * Wrapping in await act(async () => {}) lets React flush the Suspense
+ * resolution before assertions run.
+ */
+async function renderDetailPage() {
+  let result!: ReturnType<typeof renderWithProviders>
+  await act(async () => {
+    result = renderWithProviders(
+      <Routes>
+        <Route path="/lists/:listId" element={<ListDetailPage />} />
+      </Routes>,
+      { initialRoute: `/lists/${LIST_ID}` },
+    )
+  })
+  return result
 }
 
 describe('ListDetailPage', () => {
@@ -32,9 +40,9 @@ describe('ListDetailPage', () => {
       ),
     )
 
-    renderDetailPage()
+    await renderDetailPage()
 
-    await waitFor(() => expect(screen.getByText('Weekend Chores')).toBeInTheDocument())
+    expect(screen.getByText('Weekend Chores')).toBeInTheDocument()
     expect(screen.getByText('Mow the lawn')).toBeInTheDocument()
   })
 
@@ -45,11 +53,9 @@ describe('ListDetailPage', () => {
       ),
     )
 
-    renderDetailPage()
+    await renderDetailPage()
 
-    await waitFor(() =>
-      expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument()
-    )
+    expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument()
   })
 
   it('adds a new task to the list on form submit', async () => {
@@ -64,9 +70,7 @@ describe('ListDetailPage', () => {
     )
 
     const user = userEvent.setup()
-    renderDetailPage()
-
-    await waitFor(() => screen.getByPlaceholderText(/new task/i))
+    await renderDetailPage()
 
     await user.type(screen.getByPlaceholderText(/new task/i), 'Walk the dog')
     await user.click(screen.getByRole('button', { name: /^add$/i }))
@@ -87,11 +91,9 @@ describe('ListDetailPage', () => {
     )
 
     const user = userEvent.setup()
-    renderDetailPage()
+    await renderDetailPage()
 
-    // Wait for the status button to appear and click it
-    const statusBtn = await screen.findByRole('button', { name: /not started/i })
-    await user.click(statusBtn)
+    await user.click(screen.getByRole('button', { name: /not started/i }))
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /partial/i })).toBeInTheDocument()
@@ -107,9 +109,7 @@ describe('ListDetailPage', () => {
 
     // No window.confirm needed — item delete goes straight through without a dialog.
     const user = userEvent.setup()
-    renderDetailPage()
-
-    await waitFor(() => screen.getByText('Task to remove'))
+    await renderDetailPage()
 
     await user.click(screen.getByRole('button', { name: /delete task/i }))
 
@@ -128,10 +128,9 @@ describe('ListDetailPage', () => {
       ),
     )
 
-    const { container } = renderDetailPage()
-    // Wait for async data to settle before running axe
-    await waitFor(() => screen.getByText('Accessibility Test List'))
-    await waitFor(() => screen.getByText('Check the ramp'))
+    const { container } = await renderDetailPage()
+    expect(screen.getByText('Accessibility Test List')).toBeInTheDocument()
+    expect(screen.getByText('Check the ramp')).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
   })
 })

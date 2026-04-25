@@ -15,10 +15,12 @@
  * combined with wrapping in a <Routes> that has the matching path.
  */
 
+import { Suspense } from 'react'
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { MantineProvider } from '@mantine/core'
 import { AuthProvider } from '../context/AuthContext'
+import ErrorBoundary from '../components/ErrorBoundary'
 import { authStorage } from '../api/authStorage'
 
 interface RenderOptions {
@@ -42,7 +44,12 @@ export function renderWithProviders(
     <MantineProvider>
       <MemoryRouter initialEntries={[initialRoute]}>
         <AuthProvider>
-          {ui}
+          {/* ErrorBoundary + Suspense mirror the PageShell used in production */}
+          <ErrorBoundary>
+            <Suspense fallback={<div>Loading…</div>}>
+              {ui}
+            </Suspense>
+          </ErrorBoundary>
         </AuthProvider>
       </MemoryRouter>
     </MantineProvider>,

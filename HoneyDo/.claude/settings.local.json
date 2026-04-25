@@ -90,7 +90,8 @@
       "Bash(pip install *)",
       "Bash(python -c \"import pptx; print\\('python-pptx', pptx.__version__\\); from PIL import Image; print\\('Pillow OK'\\)\")",
       "Bash(python -c ' *)",
-      "Bash(python build_walkthrough.py)"
+      "Bash(python build_walkthrough.py)",
+      "Bash(npx vitest *)"
     ]
   }
 }
