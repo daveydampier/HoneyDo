@@ -143,21 +143,46 @@ const LIST_TAGS_URL = /\/api\/lists\/[^/]+\/tags(\?.*)?$/
 /**
  * Returns a promise that resolves once the /api/lists GET response lands.
  * Must be created BEFORE the navigation that triggers the request.
+ * Logs the response status so failures are visible in CI output.
  */
-export function waitForListsLoad(page: Page) {
-  return page.waitForResponse(
+export async function waitForListsLoad(page: Page) {
+  const response = await page.waitForResponse(
     r => /\/api\/lists(\?.*)?$/.test(r.url()) && r.request().method() === 'GET',
   )
+  if (!response.ok()) {
+    console.error(`[waitForListsLoad] Non-OK response: ${response.status()} ${response.url()}`)
+  }
+  return response
 }
 
 /**
  * Returns a promise that resolves once a /api/lists/:id/items GET response lands.
  * Must be created BEFORE the navigation that triggers the request.
+ * Logs the response status so failures are visible in CI output.
  */
-export function waitForItemsLoad(page: Page) {
-  return page.waitForResponse(
+export async function waitForItemsLoad(page: Page) {
+  const response = await page.waitForResponse(
     r => /\/api\/lists\/[^/]+\/items(\?.*)?$/.test(r.url()) && r.request().method() === 'GET',
   )
+  if (!response.ok()) {
+    console.error(`[waitForItemsLoad] Non-OK response: ${response.status()} ${response.url()}`)
+  }
+  return response
+}
+
+/**
+ * Attach console-error and uncaught-error listeners to surface React/JS errors
+ * in the Playwright test output.  Call once per test (or in beforeEach).
+ */
+export function setupPageDiagnostics(page: Page) {
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      console.error('[browser console error]', msg.text())
+    }
+  })
+  page.on('pageerror', (err) => {
+    console.error('[browser uncaught error]', err.message)
+  })
 }
 
 /**

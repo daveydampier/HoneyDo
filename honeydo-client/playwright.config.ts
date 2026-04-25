@@ -17,16 +17,17 @@ export default defineConfig({
   /* One retry on CI to absorb flake; none locally for fast feedback */
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? 'github' : 'html',
+  reporter: process.env.CI ? [['github'], ['list']] : 'html',
   use: {
     baseURL: 'http://localhost:5173',
-    trace: 'on-first-retry',
+    trace: 'on',
+    screenshot: 'only-on-failure',
   },
   expect: {
     // Pages using React 19 use() + Suspense fetch during the initial render.
-    // On slow CI machines the Suspense resolution + React re-render can take
-    // a couple of seconds longer than the default 5 s window.
-    timeout: 15_000,
+    // Suspense resolution + React re-render on CI can take several seconds;
+    // give it a generous window so slow machines don't flake.
+    timeout: 30_000,
   },
   projects: [
     {

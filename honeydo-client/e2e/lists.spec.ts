@@ -3,9 +3,10 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedAuth, setupDefaultRoutes, makeList, json, noContent, waitForListsLoad } from './helpers'
+import { seedAuth, setupDefaultRoutes, makeList, json, noContent, waitForListsLoad, setupPageDiagnostics } from './helpers'
 
 test.beforeEach(async ({ page }) => {
+  setupPageDiagnostics(page)
   await seedAuth(page)
   await setupDefaultRoutes(page)
 })
@@ -21,6 +22,8 @@ test('lists page shows list titles returned by the API', async ({ page }) => {
   const ready = waitForListsLoad(page)
   await page.goto('/')
   await ready
+  console.log('[lists test] URL after ready:', page.url())
+  console.log('[lists test] Body:', (await page.locator('body').textContent())?.substring(0, 300))
 
   await expect(page.getByText('Groceries')).toBeVisible()
   await expect(page.getByText('Home Repairs')).toBeVisible()

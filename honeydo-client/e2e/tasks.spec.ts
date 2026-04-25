@@ -3,7 +3,7 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedAuth, setupDefaultRoutes, makeList, makeItem, makePagedResult, json, noContent, waitForItemsLoad } from './helpers'
+import { seedAuth, setupDefaultRoutes, makeList, makeItem, makePagedResult, json, noContent, waitForItemsLoad, setupPageDiagnostics } from './helpers'
 
 const LIST_ID = 'list-1'
 
@@ -14,6 +14,7 @@ const itemUrl = (listId: string, itemId: string) =>
 const listUrl = (listId: string) => new RegExp(`/api/lists/${listId}(\\?.*)?$`)
 
 test.beforeEach(async ({ page }) => {
+  setupPageDiagnostics(page)
   await seedAuth(page)
   await setupDefaultRoutes(page)
 })
@@ -29,6 +30,8 @@ test('list detail page shows the list title and tasks', async ({ page }) => {
   const ready = waitForItemsLoad(page)
   await page.goto(`/lists/${LIST_ID}`)
   await ready
+  console.log('[tasks test] URL after ready:', page.url())
+  console.log('[tasks test] Body:', (await page.locator('body').textContent())?.substring(0, 300))
 
   await expect(page.getByText('Weekend Chores')).toBeVisible()
   await expect(page.getByText('Mow the lawn')).toBeVisible()

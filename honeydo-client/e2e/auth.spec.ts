@@ -3,7 +3,11 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedAuth, setupDefaultRoutes, makeList, makePagedResult, makeItem, json, waitForListsLoad } from './helpers'
+import { seedAuth, setupDefaultRoutes, makeList, makePagedResult, makeItem, json, waitForListsLoad, setupPageDiagnostics } from './helpers'
+
+test.beforeEach(async ({ page }) => {
+  setupPageDiagnostics(page)
+})
 
 // ---------------------------------------------------------------------------
 // Login
@@ -24,6 +28,8 @@ test('login with valid credentials navigates to the lists page', async ({ page }
   const listsReady = waitForListsLoad(page)
   await page.getByRole('button', { name: /sign in/i }).click()
   await listsReady
+  console.log('[auth login test] URL after ready:', page.url())
+  console.log('[auth login test] Body:', (await page.locator('body').textContent())?.substring(0, 300))
 
   // After login, the app routes to / which renders the lists page
   await expect(page.getByRole('heading', { name: /my lists/i })).toBeVisible()
