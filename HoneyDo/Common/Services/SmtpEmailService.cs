@@ -10,12 +10,11 @@ public class SmtpEmailService(IConfiguration config, ILogger<SmtpEmailService> l
     {
         var host = config["Email:Smtp:Host"];
 
-        // If no SMTP host is configured, log only non-sensitive metadata so developers
-        // know an email was attempted without exposing recipient private data in logs.
+        // If no SMTP host is configured, avoid logging private email contents.
         if (string.IsNullOrWhiteSpace(host))
         {
             logger.LogInformation(
-                "📧 [DEV — no SMTP configured] Subject: {Subject} | BodyLength: {BodyLength}",
+                "📧 [DEV — no SMTP configured] Email suppressed. Subject: {Subject} | BodyLength: {BodyLength}",
                 subject, htmlBody?.Length ?? 0);
             return;
         }
