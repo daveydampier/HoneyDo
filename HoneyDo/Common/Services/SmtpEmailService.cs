@@ -10,13 +10,18 @@ public class SmtpEmailService(IConfiguration config, ILogger<SmtpEmailService> l
     {
         var host = config["Email:Smtp:Host"];
 
-        // If no SMTP host is configured, log the full email to the console so
-        // developers can grab the invite link without needing a real mail server.
+        // If no SMTP host is configured, log a redacted preview so developers know
+        // an email was attempted without exposing recipient/body private data in logs.
         if (string.IsNullOrWhiteSpace(host))
         {
+            var atIndex = to.IndexOf('@');
+            var redactedTo = atIndex > 1
+                ? $"{to[0]}***{to.Substring(atIndex)}"
+                : "<redacted>";
+
             logger.LogInformation(
-                "📧 [DEV — no SMTP configured] To: {To} | Subject: {Subject}\n{Body}",
-                to, subject, htmlBody);
+                "📧 [DEV — no SMTP configured] To: {ToRedacted} | Subject: {Subject} | BodyLength: {BodyLength}",
+                redactedTo, subject, htmlBody?.Length ?? 0);
             return;
         }
 
