@@ -1,5 +1,9 @@
 # HoneyDo — Technical Documentation
 
+This document is the technical reference for HoneyDo. It covers architecture, the domain model, validation rules, the complete API surface, security, testing strategy, CI, and the deliberate tradeoffs the project has accepted.
+
+For getting the project running locally, see the top-level [README.md](../README.md).
+
 ## Table of Contents
 
 1. [Application Overview](#1-application-overview)
@@ -85,7 +89,7 @@ Each list has a many-to-many `ListMember` join table with a `MemberRole` enum (`
 
 `Database.Migrate()` is called in `Program.cs` during application startup inside a scoped service scope. This applies any pending EF migrations automatically when the API starts.
 
-**Rationale:** Eliminates the need to manually run `dotnet ef database update` when deploying or after adding new migrations. Migrations are applied exactly once per pending migration, with EF Core's `__EFMigrationsHistory` table preventing re-application.
+**Rationale:** Eliminates the need to manually run `dotnet ef database update` when deploying or after adding new migrations. Migrations are applied exactly once per pending migration, with EF Core's `__EFMigrationsHistory` table preventing re-application. This pattern is appropriate for single-instance deployments only — see §14 (Known Tradeoffs).
 
 ### 2.8 Email with Dev Console Fallback
 
@@ -315,16 +319,11 @@ JWT tokens are issued on register and login. All endpoints except `/api/auth/reg
 | `Name` | Profile display name |
 
 **Configuration:**
-- `Jwt:Key` — HMAC-SHA256 signing secret (minimum 32 characters)
+- `Jwt:Key` — HMAC-SHA256 signing secret (minimum 32 characters). See README for setup.
 - `Jwt:Issuer` — Validated issuer string
 - `Jwt:Audience` — Validated audience string
 - `Jwt:ExpiryHours` — Token lifetime (default: 24 hours)
 - `ClockSkew: TimeSpan.Zero` — No leeway on token expiry; tokens expire exactly when they say
-
-**Key setup:** `appsettings.json` deliberately ships with no `Jwt:Key` value — the app fails fast on startup if the key is missing or shorter than 32 bytes, so production deployments cannot accidentally run with a default secret.
-
-- **Development:** `appsettings.Development.json` contains a clearly-labelled dev-only key so `dotnet run` works out of the box. This file is checked in but the key it holds is never used in production (the Development environment is never active there).
-- **Production:** Supply `Jwt:Key` via an environment variable (`Jwt__Key=<secret>`) or .NET User Secrets. Never commit a real secret to source control. Minimum 32 bytes (256 bits) for HMAC-SHA256.
 
 ### 7.2 Password Hashing
 
@@ -599,7 +598,9 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
 
 ## 10. Configuration Reference
 
-### appsettings.json
+For setup steps (JWT key, SMTP, running locally, regenerating types), see the top-level [README.md](../README.md). This section documents the configuration schema and migration history.
+
+### appsettings.json schema
 
 ```json
 {
@@ -635,82 +636,10 @@ CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any h
 }
 ```
 
-**Email configuration notes:**
-- Leave `Email:Smtp:Host` empty for development — the full email body (including invite links) will be logged to the API console instead of sent
-- Set `AppUrl` to the frontend's base URL so that invite links in emails point to the correct host
-
-### First-Time Clone Setup
-
-After cloning the repository, run this once to enable the pre-commit hook that runs the test suite before every commit:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-This wires up `.githooks/pre-commit`, which runs `dotnet test` automatically before git records each commit. If any test fails the commit is aborted and the failure is shown — fix it, then commit again. Skipping this step means the hook will not run and broken code can reach the repo.
-
-### Running Locally
-
-```bash
-# Terminal 1 — API (auto-applies pending migrations on startup)
-cd HoneyDo
-dotnet run
-
-# Terminal 2 — Frontend
-cd honeydo-client
-npm run dev
-```
-
-- API: `http://localhost:5277`
-- Frontend / Vite dev proxy: `http://localhost:5173`
-
-The Vite dev server proxies all `/api/*` requests to `http://localhost:5277`, so the frontend always uses relative `/api/...` paths.
-
-### Running Tests
-
-```bash
-# Backend unit + integration tests
-dotnet test HoneyDo.Tests/HoneyDo.Tests.csproj
-
-# Frontend unit + integration tests (Vitest)
-cd honeydo-client && npm test
-
-# Frontend E2E tests (Playwright — requires the Vite dev server to be running,
-# or Playwright will start it automatically)
-cd honeydo-client && npm run test:e2e
-```
-
-### Regenerating TypeScript API Types
-
-The frontend types in `src/api/generated.ts` are auto-generated from the OpenAPI spec (`honeydo-client/HoneyDo.json`). Regenerate whenever backend DTOs or endpoints change:
-
-```bash
-# Step 1: Regenerate the OpenAPI spec from the running backend
-#   Requires the Jwt:Key to be set (it starts the app to introspect it).
-$env:Jwt__Key="your-dev-key-here"
-dotnet build HoneyDo/HoneyDo.csproj /p:GenerateApiSpec=true
-#   This writes honeydo-client/HoneyDo.json
-
-# Step 2: Regenerate the TypeScript types from the spec
-cd honeydo-client && npm run generate
-#   This writes src/api/generated.ts
-```
-
-`src/api/types.ts` re-exports from `generated.ts` under stable names (and overrides a few fields where the .NET 10 OpenAPI emitter uses a `number | string` union for integer fields). All page imports use `types.ts` — only `types.ts` needs adjusting if the generated shape changes.
-
-### Migrations
-
-Migrations are applied automatically via `Database.Migrate()` in `Program.cs` on every API startup. No manual `dotnet ef database update` step is needed during normal development.
-
-To generate a new migration after changing the domain model:
-
-```bash
-# Stop the running API first (it locks HoneyDo.exe), then:
-dotnet ef migrations add <MigrationName> --project HoneyDo/HoneyDo.csproj
-
-# Restart the API — it will apply the migration automatically
-dotnet run --project HoneyDo/HoneyDo.csproj
-```
+**Notes:**
+- Leave `Email:Smtp:Host` empty for development — the full email body (including invite links) will be logged to the API console instead of sent.
+- `AppUrl` must be set to the frontend's base URL so invite links in emails point to the correct host.
+- `AllowedOrigins` is comma-separated when multiple origins are required.
 
 ### Migration History
 
@@ -774,7 +703,7 @@ The preference is persisted in `localStorage` under the key `honeydo-color-schem
 
 ### TypeScript API Types (`src/api/types.ts`)
 
-Types are auto-generated from the backend's OpenAPI 3.1 spec via `openapi-typescript`. `src/api/generated.ts` contains the raw generated output; `src/api/types.ts` re-exports everything under stable names used throughout the app. See "Regenerating TypeScript API Types" above.
+Types are auto-generated from the backend's OpenAPI 3.1 spec via `openapi-typescript`. `src/api/generated.ts` contains the raw generated output; `src/api/types.ts` re-exports everything under stable names used throughout the app. See the README for regeneration steps.
 
 ```typescript
 TodoList         // id, title, role, ownerName, contributorNames, memberCount,
@@ -796,7 +725,7 @@ ActivityLogEntry // id, actionType, actorName, detail, timestamp
 
 ## 12. Testing Strategy
 
-The frontend uses a three-layer test pyramid:
+The frontend uses a three-layer test pyramid.
 
 ### Layer 1 — Unit tests (Vitest + Testing Library)
 
@@ -885,11 +814,7 @@ CI runs on every push and pull request to `main` via GitHub Actions (`.github/wo
 
 ### Pre-commit hook
 
-`.githooks/pre-commit` runs the full backend test suite (`dotnet test`) before every local commit. Wire it up once after cloning:
-
-```bash
-git config core.hooksPath .githooks
-```
+`.githooks/pre-commit` runs the full backend test suite (`dotnet test`) before every local commit. See the README for one-time setup.
 
 ### Dependabot
 
@@ -902,7 +827,7 @@ git config core.hooksPath .githooks
 
 ## 14. Known Tradeoffs
 
-These are deliberate decisions made during development where a simpler or faster path was chosen over the production-optimal one. They are documented here so the reasoning is explicit rather than implicit.
+These are deliberate decisions made during development where a simpler or faster path was chosen over the production-optimal one. They are documented here so the reasoning is explicit rather than implicit. The README's "Scalability" and "Future Work" sections summarise the migration paths and the triggers that would move each item from "later" to "now."
 
 ### SQLite over PostgreSQL
 
