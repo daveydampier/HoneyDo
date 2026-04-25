@@ -1,4 +1,4 @@
-import { useState, useEffect, useActionState, type FormEvent } from 'react'
+import { useState, useEffect, useActionState, startTransition, type FormEvent } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/client'
@@ -59,7 +59,7 @@ export default function RegisterPage() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    submitAction({ email, password, displayName })
+    startTransition(() => submitAction({ email, password, displayName }))
   }
 
   return (

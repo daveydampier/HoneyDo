@@ -18,6 +18,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['github'], ['list']] : 'html',
+  /* Overall per-test timeout — needs to be generous enough to cover
+     the webServer cold start on CI plus the assertions themselves. */
+  timeout: 60_000,
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on',
@@ -36,9 +39,17 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    // CI: build a production bundle and serve with vite preview.
+    //   - Eliminates Vite dev-server cold-start latency on first page load.
+    //   - Production build strips React StrictMode's extra render/mount pass,
+    //     so each page fires exactly one API request — matching our mocks.
+    // Local: reuse the already-running dev server for fast iteration.
+    command: process.env.CI
+      ? 'npm run build && npm run preview -- --port 5173'
+      : 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
+    // Build + preview can take up to 2 minutes on a slow CI runner.
+    timeout: process.env.CI ? 120_000 : 30_000,
   },
 })

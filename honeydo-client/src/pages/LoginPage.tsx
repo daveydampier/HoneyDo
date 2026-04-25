@@ -1,4 +1,4 @@
-import { useState, useActionState, type FormEvent } from 'react'
+import { useState, useActionState, startTransition, type FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { ApiError } from '../api/types'
@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    submitAction({ email, password })
+    startTransition(() => submitAction({ email, password }))
   }
 
   return (
