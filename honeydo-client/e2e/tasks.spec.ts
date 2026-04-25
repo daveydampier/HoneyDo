@@ -31,7 +31,8 @@ test('list detail page shows the list title and tasks', async ({ page }) => {
   await page.goto(`/lists/${LIST_ID}`)
   await ready
   console.log('[tasks test] URL after ready:', page.url())
-  console.log('[tasks test] Body:', (await page.locator('body').textContent())?.substring(0, 300))
+  console.log('[tasks test] ErrorBoundary visible?', await page.locator('text=Something went wrong').count())
+  console.log('[tasks test] #root text:', (await page.locator('#root').textContent())?.substring(0, 500))
 
   await expect(page.getByText('Weekend Chores')).toBeVisible()
   await expect(page.getByText('Mow the lawn')).toBeVisible()

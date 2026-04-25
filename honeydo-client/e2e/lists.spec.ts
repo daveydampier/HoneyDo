@@ -23,7 +23,8 @@ test('lists page shows list titles returned by the API', async ({ page }) => {
   await page.goto('/')
   await ready
   console.log('[lists test] URL after ready:', page.url())
-  console.log('[lists test] Body:', (await page.locator('body').textContent())?.substring(0, 300))
+  console.log('[lists test] ErrorBoundary visible?', await page.locator('text=Something went wrong').count())
+  console.log('[lists test] #root text:', (await page.locator('#root').textContent())?.substring(0, 500))
 
   await expect(page.getByText('Groceries')).toBeVisible()
   await expect(page.getByText('Home Repairs')).toBeVisible()

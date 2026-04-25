@@ -17,8 +17,16 @@ const STATUS_CHIPS = [
 ] as const
 
 export default function ListsPage() {
-  const [listsPromise] = useState(() => api.get<TodoList[]>('/lists'))
+  const [listsPromise] = useState(() => {
+    const p = api.get<TodoList[]>('/lists')
+    p.then(
+      data => console.error('[DEBUG ListsPage] promise resolved, items:', Array.isArray(data) ? data.length : typeof data),
+      err  => console.error('[DEBUG ListsPage] promise REJECTED:', String(err)),
+    )
+    return p
+  })
   const initialLists = use(listsPromise)
+  console.error('[DEBUG ListsPage] rendered past use(), lists:', Array.isArray(initialLists) ? initialLists.length : typeof initialLists)
 
   const [lists, setLists] = useState(initialLists)
   const [newTitle, setNewTitle] = useState('')

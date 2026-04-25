@@ -29,7 +29,8 @@ test('login with valid credentials navigates to the lists page', async ({ page }
   await page.getByRole('button', { name: /sign in/i }).click()
   await listsReady
   console.log('[auth login test] URL after ready:', page.url())
-  console.log('[auth login test] Body:', (await page.locator('body').textContent())?.substring(0, 300))
+  console.log('[auth login test] ErrorBoundary visible?', await page.locator('text=Something went wrong').count())
+  console.log('[auth login test] #root text:', (await page.locator('#root').textContent())?.substring(0, 500))
 
   // After login, the app routes to / which renders the lists page
   await expect(page.getByRole('heading', { name: /my lists/i })).toBeVisible()

@@ -15,6 +15,7 @@ import ActivityPage from './pages/ActivityPage'
 
 /** Spinner shown by Suspense while a page's initial data promise is pending. */
 function PageLoader() {
+  console.error('[DEBUG PageLoader] Suspense fallback rendering')
   return (
     <Group justify="center" pt={80}>
       <Loader size="sm" />

@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react'
+import React, { Component, type ReactNode } from 'react'
 import { Container, Text, Button, Stack } from '@mantine/core'
 
 interface Props {
@@ -19,6 +19,12 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(): State {
     return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Log in all environments — React silences these in production otherwise.
+    console.error('[ErrorBoundary] caught error:', error.message)
+    console.error('[ErrorBoundary] component stack:', info.componentStack)
   }
 
   handleRetry = () => {
