@@ -20,6 +20,10 @@ test('login with valid credentials navigates to the lists page', async ({ page }
   await page.getByPlaceholder('Your password').fill('correct-password')
   await page.getByRole('button', { name: /sign in/i }).click()
 
+  // After login the app navigates to / and ListsPage suspends while fetching.
+  // Wait for all in-flight requests to settle before asserting content.
+  await page.waitForLoadState('networkidle')
+
   // After login, the app routes to / which renders the lists page
   await expect(page.getByRole('heading', { name: /my lists/i })).toBeVisible()
 })
@@ -66,6 +70,9 @@ test('register with valid details navigates to the lists page', async ({ page })
   await page.getByRole('textbox', { name: /email/i }).fill('alice@example.com')
   await page.getByPlaceholder('Min 8 characters').fill('secret123')
   await page.getByRole('button', { name: /create account/i }).click()
+
+  // Same as login: wait for the lists-page data fetch to complete.
+  await page.waitForLoadState('networkidle')
 
   await expect(page.getByRole('heading', { name: /my lists/i })).toBeVisible()
 })

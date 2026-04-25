@@ -22,6 +22,12 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
   },
+  expect: {
+    // Pages using React 19 use() + Suspense fetch during the initial render.
+    // On slow CI machines the Suspense resolution + React re-render can take
+    // a couple of seconds longer than the default 5 s window.
+    timeout: 15_000,
+  },
   projects: [
     {
       name: 'chromium',
