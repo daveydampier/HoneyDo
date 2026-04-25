@@ -3,7 +3,7 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedAuth, setupDefaultRoutes, makeList, makeItem, makePagedResult, json, noContent } from './helpers'
+import { seedAuth, setupDefaultRoutes, makeList, makeItem, makePagedResult, json, noContent, waitForItemsLoad } from './helpers'
 
 const LIST_ID = 'list-1'
 
@@ -26,7 +26,9 @@ test('list detail page shows the list title and tasks', async ({ page }) => {
     json(route, makePagedResult([makeItem({ content: 'Mow the lawn' })]))
   )
 
-  await page.goto(`/lists/${LIST_ID}`, { waitUntil: 'networkidle' })
+  const ready = waitForItemsLoad(page)
+  await page.goto(`/lists/${LIST_ID}`)
+  await ready
 
   await expect(page.getByText('Weekend Chores')).toBeVisible()
   await expect(page.getByText('Mow the lawn')).toBeVisible()
@@ -37,7 +39,9 @@ test('empty state is shown when the list has no tasks', async ({ page }) => {
     json(route, makePagedResult([]))
   )
 
-  await page.goto(`/lists/${LIST_ID}`, { waitUntil: 'networkidle' })
+  const ready = waitForItemsLoad(page)
+  await page.goto(`/lists/${LIST_ID}`)
+  await ready
 
   await expect(page.getByText(/no tasks yet/i)).toBeVisible()
 })
@@ -49,7 +53,9 @@ test('adding a task appends it to the list', async ({ page }) => {
     return json(route, makeItem({ id: 'item-new', content: body.content }))
   })
 
-  await page.goto(`/lists/${LIST_ID}`, { waitUntil: 'networkidle' })
+  const ready = waitForItemsLoad(page)
+  await page.goto(`/lists/${LIST_ID}`)
+  await ready
   await expect(page.getByPlaceholder(/new task/i)).toBeVisible()
 
   await page.getByPlaceholder(/new task/i).fill('Walk the dog')
@@ -66,7 +72,9 @@ test('clicking the status button cycles the task status', async ({ page }) => {
     json(route, makeItem({ status: { id: 2, name: 'Partial' } }))
   )
 
-  await page.goto(`/lists/${LIST_ID}`, { waitUntil: 'networkidle' })
+  const ready = waitForItemsLoad(page)
+  await page.goto(`/lists/${LIST_ID}`)
+  await ready
 
   const statusBtn = page.getByRole('button', { name: /not started/i })
   await expect(statusBtn).toBeVisible()
@@ -83,7 +91,9 @@ test('deleting a task removes it from the list', async ({ page }) => {
     noContent(route)
   )
 
-  await page.goto(`/lists/${LIST_ID}`, { waitUntil: 'networkidle' })
+  const ready = waitForItemsLoad(page)
+  await page.goto(`/lists/${LIST_ID}`)
+  await ready
   await expect(page.getByText('Task to remove')).toBeVisible()
 
   await page.getByRole('button', { name: /delete task/i }).click()

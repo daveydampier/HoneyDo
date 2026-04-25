@@ -131,6 +131,35 @@ const ITEM_URL = /\/api\/lists\/[^/]+\/items\/[^/?]+(\?.*)?$/
 /** /api/lists/:listId/tags */
 const LIST_TAGS_URL = /\/api\/lists\/[^/]+\/tags(\?.*)?$/
 
+// ---------------------------------------------------------------------------
+// Data-load waiters
+// ---------------------------------------------------------------------------
+// With React 19 use() + Suspense, pages fire their API calls during the initial
+// render rather than in useEffect. To avoid races between the fetch resolving
+// and toBeVisible() polling, create a waitForResponse promise BEFORE calling
+// page.goto() and await it afterwards. This guarantees the mock has responded
+// (and therefore React has re-rendered with data) before any DOM assertion runs.
+
+/**
+ * Returns a promise that resolves once the /api/lists GET response lands.
+ * Must be created BEFORE the navigation that triggers the request.
+ */
+export function waitForListsLoad(page: Page) {
+  return page.waitForResponse(
+    r => /\/api\/lists(\?.*)?$/.test(r.url()) && r.request().method() === 'GET',
+  )
+}
+
+/**
+ * Returns a promise that resolves once a /api/lists/:id/items GET response lands.
+ * Must be created BEFORE the navigation that triggers the request.
+ */
+export function waitForItemsLoad(page: Page) {
+  return page.waitForResponse(
+    r => /\/api\/lists\/[^/]+\/items(\?.*)?$/.test(r.url()) && r.request().method() === 'GET',
+  )
+}
+
 /**
  * Register all the happy-path API routes that every authenticated test needs.
  * Individual tests can override specific routes with additional page.route()

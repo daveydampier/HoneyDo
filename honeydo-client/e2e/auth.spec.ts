@@ -3,7 +3,7 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedAuth, setupDefaultRoutes, makeList, makePagedResult, makeItem, json } from './helpers'
+import { seedAuth, setupDefaultRoutes, makeList, makePagedResult, makeItem, json, waitForListsLoad } from './helpers'
 
 // ---------------------------------------------------------------------------
 // Login
@@ -18,11 +18,12 @@ test('login with valid credentials navigates to the lists page', async ({ page }
   await page.goto('/login')
   await page.getByRole('textbox', { name: /email/i }).fill('alice@example.com')
   await page.getByPlaceholder('Your password').fill('correct-password')
-  await page.getByRole('button', { name: /sign in/i }).click()
 
-  // After login the app navigates to / and ListsPage suspends while fetching.
-  // Wait for all in-flight requests to settle before asserting content.
-  await page.waitForLoadState('networkidle')
+  // Set up the waiter before clicking — the login triggers a navigate('/') which
+  // mounts ListsPage, which fires api.get('/lists') via use() during its render.
+  const listsReady = waitForListsLoad(page)
+  await page.getByRole('button', { name: /sign in/i }).click()
+  await listsReady
 
   // After login, the app routes to / which renders the lists page
   await expect(page.getByRole('heading', { name: /my lists/i })).toBeVisible()
@@ -69,10 +70,11 @@ test('register with valid details navigates to the lists page', async ({ page })
   await page.getByPlaceholder('Your name').fill('Alice')
   await page.getByRole('textbox', { name: /email/i }).fill('alice@example.com')
   await page.getByPlaceholder('Min 8 characters').fill('secret123')
-  await page.getByRole('button', { name: /create account/i }).click()
 
-  // Same as login: wait for the lists-page data fetch to complete.
-  await page.waitForLoadState('networkidle')
+  // Same pattern: register triggers navigate('/') → ListsPage fetches lists.
+  const listsReady = waitForListsLoad(page)
+  await page.getByRole('button', { name: /create account/i }).click()
+  await listsReady
 
   await expect(page.getByRole('heading', { name: /my lists/i })).toBeVisible()
 })
