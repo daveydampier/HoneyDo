@@ -88,7 +88,9 @@
       "Bash(python -c \"import pptx; print\\('python-pptx', pptx.__version__\\)\")",
       "Bash(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
       "Bash(pip install *)",
-      "Bash(python -c \"import pptx; print\\('python-pptx', pptx.__version__\\); from PIL import Image; print\\('Pillow OK'\\)\")"
+      "Bash(python -c \"import pptx; print\\('python-pptx', pptx.__version__\\); from PIL import Image; print\\('Pillow OK'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python build_walkthrough.py)"
     ]
   }
 }
