@@ -333,6 +333,17 @@ BCrypt is used for password hashing. Passwords are never stored or logged in pla
 
 CORS is configured from `AllowedOrigins` in appsettings (comma-separated). Any header and method is allowed for those origins.
 
+### 7.4 HTTP Security Headers
+
+`SecurityHeadersMiddleware` is registered as the first middleware in the pipeline and appends two headers to every response:
+
+| Header | Value | Purpose |
+|---|---|---|
+| `X-Frame-Options` | `DENY` | Prevents the app from being embedded in an `<iframe>`, mitigating clickjacking attacks (CWE-451 / CWE-829). |
+| `X-Content-Type-Options` | `nosniff` | Prevents browsers from MIME-sniffing a response away from the declared `Content-Type`. |
+
+Placing this middleware before `UseAuthentication` and `UseAuthorization` ensures headers are present on all responses, including 401/403 error payloads that short-circuit the auth pipeline.
+
 ---
 
 ## 8. Error Handling
@@ -747,7 +758,7 @@ Each page test file renders the real page component inside `renderWithProviders`
 | `handlers.ts` | Default MSW request handlers for all API endpoints (happy-path responses). Tests override specific handlers with `server.use(...)`. |
 | `server.ts` | `setupServer(...handlers)` — the MSW Node server instance. |
 | `setup.ts` | Global test setup: `@testing-library/jest-dom` matchers, `jest-axe` `toHaveNoViolations` matcher, `window.matchMedia` stub (jsdom doesn't implement it; Mantine requires it), MSW lifecycle hooks. |
-| `renderWithProviders.tsx` | Render helper. Seeds `localStorage` with a test token for authenticated tests; clears it for auth-flow tests. Accepts `{ authenticated, initialRoute }` options. Wraps the component in `MantineProvider`, `MemoryRouter`, `AuthProvider`, `ErrorBoundary`, and `Suspense` — mirroring the production `PageShell` so rejected `use()` promises are caught rather than crashing the test tree. |
+| `renderWithProviders.tsx` | Render helper. Seeds `localStorage` with a test token for authenticated tests; clears it for auth-flow tests. Accepts `{ authenticated, initialRoute }` options. Wraps the component in `MantineProvider`, `MemoryRouter`, `AuthProvider`, `ErrorBoundary`, and `Suspense` — mirroring the production `PageShell` so unhandled render errors are caught rather than crashing the test tree. |
 
 **MSW handler override pattern:** `server.resetHandlers()` runs in `afterEach` (wired in `setup.ts`), so per-test overrides are automatically torn down. Register overrides with `server.use(...)` inside `it()` blocks, before any user interactions.
 
@@ -859,6 +870,8 @@ The application uses a request/response model throughout. Members editing the sa
 
 ### TanStack Query Not Used
 
-Data fetching uses React 19's `use()` hook paired with `<Suspense>`. Each page creates a stable fetch promise in `useState(() => api.get(...))` (or `Promise.all([...])` for pages that need multiple resources in parallel), then reads it with `use()` — which suspends the component until the promise settles. `PageShell` wraps every private route in an `<ErrorBoundary>` + `<Suspense>`, so errors surface to a "Something went wrong" fallback without per-page loading or error state. This replaced the earlier hand-rolled `useEffect` + `useState` + loading/error pattern and reduced boilerplate significantly.
+Data fetching uses `useEffect` + a null-guard loading state. Each data page initialises its state as `null` (or an empty array), triggers a `useEffect` on mount that calls `api.get(...)` (or `Promise.all([...])` for pages requiring multiple parallel resources), and renders a `<Loader>` spinner until the state is populated. `PageShell` still wraps every private route in an `<ErrorBoundary>` + `<Suspense>` for error containment and future lazy-loading, but Suspense no longer drives the data-loading lifecycle.
 
-What `use()` does **not** provide: a client-side cache, background refetch, or rollback on optimistic-update failure. Navigating away from a page and back always triggers a fresh network request. TanStack Query would add all three. It remains deferred because the current implementation is correct and the optimistic update paths that would benefit most from rollback (`ListDetailPage` mutations) are the hardest to migrate safely.
+**Why `use()` + Suspense was removed:** React 19's concurrent scheduler discards uncommitted work-in-progress fibers when competing state updates arrive (e.g., the app-layout avatar fetch, the auth context `isLoading` flip, or a router transition). Each discard causes a new component mount, which re-invokes the `useState` initializer and creates a fresh pending promise — resulting in an infinite suspension loop where the `use()` call never returns even after the underlying fetch resolves.
+
+What `useEffect` + null-guard does **not** provide: a client-side cache, background refetch, or rollback on optimistic-update failure. Navigating away from a page and back always triggers a fresh network request. TanStack Query would add all three. It remains deferred because the current `useEffect` implementation is straightforward and the optimistic update paths that would benefit most from rollback (`ListDetailPage` mutations) are the hardest to migrate safely.
