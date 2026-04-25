@@ -1,4 +1,4 @@
-import { useState, use, useEffect, useRef, type FormEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { TodoItem, Tag, PagedResult, TodoList, Member, AddableFriend, ApiError } from '../api/types'
@@ -7,7 +7,7 @@ import { getTagTextColor } from '../utils/tags'
 import {
   Container, Group, Title, Text, Anchor, Button, Badge,
   Paper, Stack, Alert, Textarea, TextInput,
-  UnstyledButton, ActionIcon, Popover,
+  UnstyledButton, ActionIcon, Popover, Loader,
 } from '@mantine/core'
 import {
   IconAlertCircle, IconSortAscending, IconSortDescending,
@@ -67,17 +67,9 @@ export default function ListDetailPage() {
   const { profileId } = useAuth()
   const navigate = useNavigate()
 
-  // Load list, items (default sort), and tags in parallel on first render
-  const [dataPromise] = useState(() => Promise.all([
-    api.get<TodoList>(`/lists/${listId}`),
-    api.get<PagedResult<TodoItem>>(`/lists/${listId}/items?sortBy=DueDate&ascending=true`),
-    api.get<Tag[]>(`/lists/${listId}/tags`),
-  ] as const))
-  const [listData, itemsData, tagsData] = use(dataPromise)
-
-  const [list, setList] = useState(listData)
-  const [items, setItems] = useState(() => sortItems(itemsData.items, 'DueDate', true))
-  const [myTags] = useState(tagsData)
+  const [list, setList] = useState<TodoList | null>(null)
+  const [items, setItems] = useState<TodoItem[]>([])
+  const [myTags, setMyTags] = useState<Tag[]>([])
 
   const [content, setContent] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -108,11 +100,22 @@ export default function ListDetailPage() {
   // General action error (status cycle, delete, close) — shown above the items list
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const isOwner = list.role === 'Owner'
-  const isClosed = !!list.closedAt
-  const canClose = isOwner && !isClosed && items.length > 0 && items.every(i => i.status.id !== 1)
+  // Load list, items, and tags in parallel on mount (or when listId changes).
+  useEffect(() => {
+    if (!listId) return
+    Promise.all([
+      api.get<TodoList>(`/lists/${listId}`),
+      api.get<PagedResult<TodoItem>>(`/lists/${listId}/items?sortBy=DueDate&ascending=true`),
+      api.get<Tag[]>(`/lists/${listId}/tags`),
+    ] as const).then(([listData, itemsData, tagsData]) => {
+      setList(listData)
+      setItems(sortItems(itemsData.items, 'DueDate', true))
+      setMyTags(tagsData)
+    }).catch(() => {})
+  }, [listId])
 
-  // Re-fetch items when sort changes; skip the very first run since use() already loaded them
+  // Re-fetch items when sort changes; skip the very first run since the initial
+  // useEffect above already loaded them with the default sort.
   const isFirstSortEffect = useRef(true)
   useEffect(() => {
     if (isFirstSortEffect.current) { isFirstSortEffect.current = false; return }
@@ -303,6 +306,16 @@ export default function ListDetailPage() {
       setActionError('Failed to delete item. Please try again.')
     }
   }
+
+  if (!list) return (
+    <Group justify="center" pt={80}>
+      <Loader size="sm" />
+    </Group>
+  )
+
+  const isOwner = list.role === 'Owner'
+  const isClosed = !!list.closedAt
+  const canClose = isOwner && !isClosed && items.length > 0 && items.every(i => i.status.id !== 1)
 
   return (
     <Container size="md" pt="xl">

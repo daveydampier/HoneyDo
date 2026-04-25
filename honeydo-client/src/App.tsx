@@ -13,9 +13,8 @@ import ProfilePage from './pages/ProfilePage'
 import FriendsPage from './pages/FriendsPage'
 import ActivityPage from './pages/ActivityPage'
 
-/** Spinner shown by Suspense while a page's initial data promise is pending. */
+/** Spinner shown by Suspense while a lazy-loaded page chunk is being fetched. */
 function PageLoader() {
-  console.error('[DEBUG PageLoader] Suspense fallback rendering')
   return (
     <Group justify="center" pt={80}>
       <Loader size="sm" />
@@ -24,9 +23,9 @@ function PageLoader() {
 }
 
 /**
- * Wraps every data-fetching page with:
- *   ErrorBoundary — catches rejected promises surfaced by React 19's use() hook
- *   Suspense      — shows <PageLoader> while the initial promise is pending
+ * Wraps every page with:
+ *   ErrorBoundary — catches unhandled render errors
+ *   Suspense      — shows <PageLoader> while a lazy-loaded chunk is pending
  */
 function PageShell({ children }: { children: ReactNode }) {
   return (

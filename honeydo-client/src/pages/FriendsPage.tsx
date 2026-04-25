@@ -1,18 +1,19 @@
-import { useState, use, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { api } from '../api/client'
 import type { FriendsResult, FriendInfo, ReceivedRequestInfo, SentRequestInfo, SendRequestResult, ApiError } from '../api/types'
 import AvatarCircle from '../components/AvatarCircle'
 import {
   Container, Group, Title, Text, TextInput, Button,
-  Paper, Stack, Alert, Badge,
+  Paper, Stack, Alert, Badge, Loader,
 } from '@mantine/core'
 import { IconAlertCircle, IconCircleCheck } from '@tabler/icons-react'
 
 export default function FriendsPage() {
-  const [dataPromise] = useState(() => api.get<FriendsResult>('/friends'))
-  const initialData = use(dataPromise)
+  const [data, setData] = useState<FriendsResult | null>(null)
 
-  const [data, setData] = useState(initialData)
+  useEffect(() => {
+    api.get<FriendsResult>('/friends').then(setData).catch(() => {})
+  }, [])
   const [email, setEmail] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
   const [sendSuccess, setSendSuccess] = useState<string | null>(null)
@@ -52,7 +53,7 @@ export default function FriendsPage() {
     if (!confirm(`Remove ${displayName} from your friends?`)) return
     try {
       await api.delete(`/friends/${friendId}`)
-      setData(prev => ({ ...prev, friends: prev.friends.filter(f => f.profileId !== friendId) }))
+      setData(prev => prev ? { ...prev, friends: prev.friends.filter(f => f.profileId !== friendId) } : prev)
     } catch {
       alert('Failed to remove friend. Please try again.')
     }
@@ -61,11 +62,17 @@ export default function FriendsPage() {
   async function handleCancelRequest(addresseeId: string) {
     try {
       await api.delete(`/friends/${addresseeId}`)
-      setData(prev => ({ ...prev, pendingSent: prev.pendingSent.filter(r => r.addresseeId !== addresseeId) }))
+      setData(prev => prev ? { ...prev, pendingSent: prev.pendingSent.filter(r => r.addresseeId !== addresseeId) } : prev)
     } catch {
       alert('Failed to cancel request. Please try again.')
     }
   }
+
+  if (!data) return (
+    <Group justify="center" pt={80}>
+      <Loader size="sm" />
+    </Group>
+  )
 
   return (
     <Container size="md" pt="xl">

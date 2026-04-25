@@ -1,4 +1,4 @@
-import { useState, use, useRef, type FormEvent, type ChangeEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Profile, Tag, ApiError } from '../api/types'
@@ -6,7 +6,7 @@ import { TAG_COLORS, getTagTextColor } from '../utils/tags'
 import {
   Container, Title, Text, TextInput, PasswordInput, Button,
   Paper, Stack, Group, Alert, Anchor, Avatar, ColorSwatch,
-  Badge, ActionIcon, SegmentedControl, useMantineColorScheme,
+  Badge, ActionIcon, SegmentedControl, useMantineColorScheme, Loader,
 } from '@mantine/core'
 import { IconAlertCircle, IconCircleCheck, IconX, IconDeviceDesktop, IconSun, IconMoon } from '@tabler/icons-react'
 
@@ -16,22 +16,28 @@ const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
 export default function ProfilePage() {
   const { colorScheme, setColorScheme } = useMantineColorScheme()
 
-  const [dataPromise] = useState(() => Promise.all([
-    api.get<Profile>('/profile'),
-    api.get<Tag[]>('/tags'),
-  ] as const))
-  const [profileData, tagsData] = use(dataPromise)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [myTags, setMyTags] = useState<Tag[]>([])
 
-  const [profile, setProfile] = useState(profileData)
-  const [myTags, setMyTags] = useState(tagsData)
+  // Profile form — initialized once data loads
+  const [displayName, setDisplayName] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [urlDraft, setUrlDraft] = useState('')
 
-  // Profile form — initialized directly from fetched data
-  const [displayName, setDisplayName] = useState(profileData.displayName)
-  const [phoneNumber, setPhoneNumber] = useState(profileData.phoneNumber ?? '')
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(profileData.avatarUrl ?? null)
-  const [urlDraft, setUrlDraft] = useState(
-    profileData.avatarUrl?.startsWith('data:') ? '' : (profileData.avatarUrl ?? '')
-  )
+  useEffect(() => {
+    Promise.all([
+      api.get<Profile>('/profile'),
+      api.get<Tag[]>('/tags'),
+    ] as const).then(([profileData, tagsData]) => {
+      setProfile(profileData)
+      setMyTags(tagsData)
+      setDisplayName(profileData.displayName)
+      setPhoneNumber(profileData.phoneNumber ?? '')
+      setAvatarUrl(profileData.avatarUrl ?? null)
+      setUrlDraft(profileData.avatarUrl?.startsWith('data:') ? '' : (profileData.avatarUrl ?? ''))
+    }).catch(() => {})
+  }, [])
   const [profileError, setProfileError] = useState<Record<string, string[]>>({})
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
@@ -181,6 +187,12 @@ export default function ProfilePage() {
       setPasswordSaving(false)
     }
   }
+
+  if (!profile) return (
+    <Group justify="center" pt={80}>
+      <Loader size="sm" />
+    </Group>
+  )
 
   return (
     <Container size={480} pt="xl">

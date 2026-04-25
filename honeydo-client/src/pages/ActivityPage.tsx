@@ -1,9 +1,9 @@
-import { useState, use } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { ActivityLogEntry, TodoList } from '../api/types'
 import {
-  Container, Title, Text, Anchor,
+  Container, Title, Text, Anchor, Group, Loader,
   Timeline,
 } from '@mantine/core'
 import {
@@ -52,12 +52,25 @@ function formatTimestamp(iso: string): string {
 export default function ActivityPage() {
   const { listId } = useParams<{ listId: string }>()
 
-  const [dataPromise] = useState(() => Promise.all([
-    api.get<TodoList>(`/lists/${listId}`),
-    api.get<ActivityLogEntry[]>(`/lists/${listId}/activity`),
-  ] as const))
+  const [list, setList] = useState<TodoList | null>(null)
+  const [logs, setLogs] = useState<ActivityLogEntry[]>([])
 
-  const [list, logs] = use(dataPromise)
+  useEffect(() => {
+    if (!listId) return
+    Promise.all([
+      api.get<TodoList>(`/lists/${listId}`),
+      api.get<ActivityLogEntry[]>(`/lists/${listId}/activity`),
+    ] as const).then(([listData, logsData]) => {
+      setList(listData)
+      setLogs(logsData)
+    }).catch(() => {})
+  }, [listId])
+
+  if (!list) return (
+    <Group justify="center" pt={80}>
+      <Loader size="sm" />
+    </Group>
+  )
 
   return (
     <Container size="md" pt="xl">

@@ -1,10 +1,10 @@
-import { useState, use, useMemo, type FormEvent } from 'react'
+import { useState, useEffect, useMemo, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { TodoList, Tag, ApiError } from '../api/types'
 import {
   Container, Group, Title, Text, TextInput, Button,
-  Paper, Stack, Anchor, Alert, Badge, Popover,
+  Paper, Stack, Anchor, Alert, Badge, Popover, Loader,
 } from '@mantine/core'
 import { IconSearch, IconAlertCircle, IconTag, IconChevronDown } from '@tabler/icons-react'
 import { getTagTextColor } from '../utils/tags'
@@ -17,18 +17,11 @@ const STATUS_CHIPS = [
 ] as const
 
 export default function ListsPage() {
-  const [listsPromise] = useState(() => {
-    const p = api.get<TodoList[]>('/lists')
-    p.then(
-      data => console.error('[DEBUG ListsPage] promise resolved, items:', Array.isArray(data) ? data.length : typeof data),
-      err  => console.error('[DEBUG ListsPage] promise REJECTED:', String(err)),
-    )
-    return p
-  })
-  const initialLists = use(listsPromise)
-  console.error('[DEBUG ListsPage] rendered past use(), lists:', Array.isArray(initialLists) ? initialLists.length : typeof initialLists)
+  const [lists, setLists] = useState<TodoList[] | null>(null)
 
-  const [lists, setLists] = useState(initialLists)
+  useEffect(() => {
+    api.get<TodoList[]>('/lists').then(setLists).catch(() => {})
+  }, [])
   const [newTitle, setNewTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -36,8 +29,8 @@ export default function ListsPage() {
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set())
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
 
-  const activeLists = lists.filter(l => !l.closedAt)
-  const closedLists = [...lists.filter(l => !!l.closedAt)]
+  const activeLists = (lists ?? []).filter(l => !l.closedAt)
+  const closedLists = [...(lists ?? []).filter(l => !!l.closedAt)]
     .sort((a, b) => new Date(b.closedAt!).getTime() - new Date(a.closedAt!).getTime())
 
   // Union of all distinct tags across all active lists — for the filter popover
@@ -78,7 +71,7 @@ export default function ListsPage() {
     setDeletingId(list.id)
     try {
       await api.delete(`/lists/${list.id}`)
-      setLists(prev => prev.filter(l => l.id !== list.id))
+      setLists(prev => prev!.filter(l => l.id !== list.id))
     } catch {
       setError(`Failed to delete "${list.title}". Please try again.`)
     } finally {
@@ -91,7 +84,7 @@ export default function ListsPage() {
     setError(null)
     try {
       const created = await api.post<TodoList>('/lists', { title: newTitle })
-      setLists(prev => [created, ...prev])
+      setLists(prev => [created, ...prev!])
       setNewTitle('')
     } catch (err) {
       const apiErr = err as ApiError
@@ -189,6 +182,12 @@ export default function ListsPage() {
       </Paper>
     )
   }
+
+  if (!lists) return (
+    <Group justify="center" pt={80}>
+      <Loader size="sm" />
+    </Group>
+  )
 
   return (
     <Container size="md" pt="xl">
