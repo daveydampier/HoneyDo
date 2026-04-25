@@ -77,7 +77,7 @@ export default function ListDetailPage() {
 
   const [list, setList] = useState(listData)
   const [items, setItems] = useState(() => sortItems(itemsData.items, 'DueDate', true))
-  const [myTags, setMyTags] = useState(tagsData)
+  const [myTags] = useState(tagsData)
 
   const [content, setContent] = useState('')
   const [dueDate, setDueDate] = useState('')
