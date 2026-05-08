@@ -16,7 +16,7 @@
   "dependencies": {
     "@mantine/core": "^9.1.0",
     "@mantine/hooks": "^9.1.0",
-    "@tabler/icons-react": "^3.41.1",
+    "@tabler/icons-react": "^3.43.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.14.2"
